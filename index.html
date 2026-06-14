@@ -59,11 +59,19 @@
   .screen { position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; padding:18px;
             background:radial-gradient(circle at 50% 30%,#13335f,#06122a 80%); overflow:auto; }
   .panel { width:100%; max-width:460px; background:rgba(10,24,48,.92); border:3px solid rgba(126,240,255,.35); border-radius:22px; padding:22px; box-shadow:0 12px 40px rgba(0,0,0,.6); }
-  .panel h1 { text-align:center; font-size:30px; margin-bottom:4px; text-shadow:0 2px 0 #000; }
+  @keyframes pulse { 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.04);} }
+  @keyframes glow { 0%,100%{ text-shadow:0 2px 0 #000, 0 0 12px rgba(126,240,255,.5);} 50%{ text-shadow:0 2px 0 #000, 0 0 22px rgba(255,213,74,.8);} }
+  .panel h1 { text-align:center; font-size:30px; margin-bottom:4px; text-shadow:0 2px 0 #000; animation:glow 2.5s ease-in-out infinite; }
+  .bigbtn { animation:pulse 1.8s ease-in-out infinite; }
   .panel h1 .em { font-size:32px; }
   .sub { text-align:center; opacity:.85; margin-bottom:16px; font-size:14px; }
   label.fld { display:block; margin:12px 0 6px; font-weight:bold; font-size:14px; }
   input[type=text] { width:100%; padding:12px 14px; border-radius:12px; border:2px solid rgba(255,255,255,.3); background:rgba(0,0,0,.35); color:#fff; font-size:16px; }
+  .countryGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px; }
+  .countryTile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 2px; border-radius:10px; border:3px solid transparent; cursor:pointer; background:rgba(255,255,255,.06); }
+  .countryTile canvas { width:46px; height:31px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .countryTile span { font-size:10px; line-height:1.1; text-align:center; }
+  .countryTile.sel { border-color:#ffd54a; background:rgba(255,213,74,.18); transform:scale(1.04); }
   .flags { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
   .flagopt { width:46px; height:46px; border-radius:12px; border:3px solid transparent; cursor:pointer; }
   .flagopt.sel { border-color:#fff; transform:scale(1.08); box-shadow:0 0 12px rgba(255,255,255,.6); }
@@ -96,6 +104,7 @@
            opacity:0; transition:opacity .25s, transform .25s; }
   #toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
   .flash { position:fixed; inset:0; background:#fff; z-index:20; pointer-events:none; opacity:0; }
+  .pop { position:fixed; transform:translate(-50%,0); font-weight:bold; font-size:22px; text-shadow:0 2px 4px #000,0 0 8px rgba(0,0,0,.5); pointer-events:none; z-index:15; transition:transform .8s ease-out, opacity .8s; }
 </style>
 </head>
 <body>
@@ -143,11 +152,16 @@
     <p class="sub">Buat negaramu sendiri, lalu kalahkan negara musuh!</p>
     <div id="bestBox" class="how hidden" style="text-align:center; margin-top:0; margin-bottom:6px;">🏆 <b>Rekor Tertinggi</b><br><span id="bestText"></span></div>
 
-    <label class="fld">🏳️ Nama Negaramu</label>
-    <input type="text" id="nameInput" maxlength="14" placeholder="contoh: Riblix Jaya" value="Riblix Jaya" />
+    <label class="fld">🌍 Pilih Negaramu</label>
+    <div class="countryGrid" id="countryPick"></div>
 
-    <label class="fld">🎨 Warna Bendera</label>
-    <div class="flags" id="flagPick"></div>
+    <button class="ghostbtn" id="customToggle" style="margin-top:12px;">✏️ Atau Buat Negara Sendiri</button>
+    <div id="customBox" class="hidden">
+      <label class="fld">🏳️ Nama Negaramu</label>
+      <input type="text" id="nameInput" maxlength="14" placeholder="contoh: Riblix Jaya" value="Indonesia" />
+      <label class="fld">🎨 Warna Bendera</label>
+      <div class="flags" id="flagPick"></div>
+    </div>
 
     <button class="bigbtn" id="playBtn">▶️ MULAI PERANG!</button>
 
@@ -272,6 +286,49 @@ const FLAG_COLORS = [
   0xbf5af2, 0xff2d95, 0x30d5c8, 0xffffff, 0x8e8e93
 ];
 
+// ---- Real-world countries (flags drawn on canvas so they look right everywhere) ----
+const COUNTRIES = [
+  { name:'Indonesia',    emoji:'🇮🇩', color:0xff3b30, flag:{type:'hstripe', colors:['#e1142d','#ffffff']} },
+  { name:'Malaysia',     emoji:'🇲🇾', color:0xffd60a, flag:{type:'hstripe', colors:['#cc0001','#fff','#cc0001','#fff','#cc0001','#fff','#010066','#fff','#cc0001','#fff','#cc0001','#fff','#cc0001','#fff']} },
+  { name:'Jepang',       emoji:'🇯🇵', color:0xff3b30, flag:{type:'circle', bg:'#ffffff', circle:'#bc002d'} },
+  { name:'Korea',        emoji:'🇰🇷', color:0x0a84ff, flag:{type:'circle', bg:'#ffffff', circle:'#cd2e3a', circle2:'#0047a0'} },
+  { name:'China',        emoji:'🇨🇳', color:0xff3b30, flag:{type:'star', bg:'#de2910', star:'#ffde00'} },
+  { name:'Amerika',      emoji:'🇺🇸', color:0x0a3b8c, flag:{type:'usa'} },
+  { name:'Inggris',      emoji:'🇬🇧', color:0x0a3b8c, flag:{type:'uk'} },
+  { name:'Prancis',      emoji:'🇫🇷', color:0x0a84ff, flag:{type:'vstripe', colors:['#0055a4','#ffffff','#ef4135']} },
+  { name:'Jerman',       emoji:'🇩🇪', color:0xffd60a, flag:{type:'hstripe', colors:['#000000','#dd0000','#ffce00']} },
+  { name:'Italia',       emoji:'🇮🇹', color:0x34c759, flag:{type:'vstripe', colors:['#009246','#ffffff','#ce2b37']} },
+  { name:'Brasil',       emoji:'🇧🇷', color:0x34c759, flag:{type:'brazil'} },
+  { name:'Spanyol',      emoji:'🇪🇸', color:0xffd60a, flag:{type:'hstripe', colors:['#aa151b','#f1bf00','#f1bf00','#aa151b']} },
+  { name:'Belanda',      emoji:'🇳🇱', color:0xff9f0a, flag:{type:'hstripe', colors:['#ae1c28','#ffffff','#21468b']} },
+  { name:'Rusia',        emoji:'🇷🇺', color:0x0a84ff, flag:{type:'hstripe', colors:['#ffffff','#0039a6','#d52b1e']} },
+  { name:'Argentina',    emoji:'🇦🇷', color:0x30d5c8, flag:{type:'hstripe', colors:['#74acdf','#ffffff','#74acdf']} },
+  { name:'Saudi',        emoji:'🇸🇦', color:0x34c759, flag:{type:'solid', colors:['#006c35']} },
+];
+
+// draw a flag onto a canvas 2d context (w x h)
+function paintFlag(ctx, w, h, spec){
+  const t=spec.type;
+  if(t==='solid'){ ctx.fillStyle=spec.colors[0]; ctx.fillRect(0,0,w,h); }
+  else if(t==='hstripe'){ const n=spec.colors.length; for(let i=0;i<n;i++){ ctx.fillStyle=spec.colors[i]; ctx.fillRect(0,Math.round(h*i/n),w,Math.ceil(h/n)+1); } }
+  else if(t==='vstripe'){ const n=spec.colors.length; for(let i=0;i<n;i++){ ctx.fillStyle=spec.colors[i]; ctx.fillRect(Math.round(w*i/n),0,Math.ceil(w/n)+1,h); } }
+  else if(t==='circle'){ ctx.fillStyle=spec.bg; ctx.fillRect(0,0,w,h); ctx.fillStyle=spec.circle; ctx.beginPath(); ctx.arc(w/2,h/2,h*0.3,0,7); ctx.fill();
+    if(spec.circle2){ ctx.fillStyle=spec.circle2; ctx.beginPath(); ctx.arc(w/2,h*0.62,h*0.3,Math.PI,0); ctx.fill(); ctx.fillStyle=spec.circle; ctx.beginPath(); ctx.arc(w/2,h*0.38,h*0.3,0,Math.PI); ctx.fill(); } }
+  else if(t==='star'){ ctx.fillStyle=spec.bg; ctx.fillRect(0,0,w,h); ctx.fillStyle=spec.star; drawStar(ctx,w*0.2,h*0.28,h*0.16); [[0.36,0.12],[0.44,0.24],[0.44,0.4],[0.36,0.52]].forEach(p=>drawStar(ctx,w*p[0],h*p[1],h*0.06)); }
+  else if(t==='usa'){ const n=13; for(let i=0;i<n;i++){ ctx.fillStyle=i%2?'#ffffff':'#b22234'; ctx.fillRect(0,Math.round(h*i/n),w,Math.ceil(h/n)+1); } ctx.fillStyle='#3c3b6e'; ctx.fillRect(0,0,w*0.4,h*7/13); ctx.fillStyle='#fff'; for(let r=0;r<5;r++)for(let c=0;c<5;c++) drawStar(ctx, w*0.06+c*w*0.07, h*0.07+r*h*0.085, h*0.022); }
+  else if(t==='uk'){ ctx.fillStyle='#012169'; ctx.fillRect(0,0,w,h); ctx.strokeStyle='#fff'; ctx.lineWidth=h*0.16; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke(); ctx.strokeStyle='#fff'; ctx.lineWidth=h*0.34; ctx.beginPath(); ctx.moveTo(w/2,0); ctx.lineTo(w/2,h); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke(); ctx.strokeStyle='#c8102e'; ctx.lineWidth=h*0.2; ctx.beginPath(); ctx.moveTo(w/2,0); ctx.lineTo(w/2,h); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke(); }
+  else if(t==='brazil'){ ctx.fillStyle='#009b3a'; ctx.fillRect(0,0,w,h); ctx.fillStyle='#ffdf00'; ctx.beginPath(); ctx.moveTo(w/2,h*0.1); ctx.lineTo(w*0.9,h/2); ctx.lineTo(w/2,h*0.9); ctx.lineTo(w*0.1,h/2); ctx.closePath(); ctx.fill(); ctx.fillStyle='#002776'; ctx.beginPath(); ctx.arc(w/2,h/2,h*0.22,0,7); ctx.fill(); }
+  else { ctx.fillStyle='#888'; ctx.fillRect(0,0,w,h); }
+}
+function drawStar(ctx,cx,cy,r){ ctx.beginPath(); for(let i=0;i<5;i++){ const a=-Math.PI/2+i*2*Math.PI/5; ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r); const a2=a+Math.PI/5; ctx.lineTo(cx+Math.cos(a2)*r*0.4, cy+Math.sin(a2)*r*0.4); } ctx.closePath(); ctx.fill(); }
+
+// make a THREE texture from a flag spec
+function flagTexture(spec){
+  const c=document.createElement('canvas'); c.width=192; c.height=128;
+  paintFlag(c.getContext('2d'), 192, 128, spec);
+  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+
 // ---- Game state ----
 const G = {
   coins: 0, wave: 1, kills: 0,
@@ -280,7 +337,8 @@ const G = {
   bombs: 1, nukes: 0,
   gunLevel: 1, fireRateLevel: 1, shieldLevel: 1, multiLevel: 1,
   running: false,
-  flag: FLAG_COLORS[0], country: 'Riblix Jaya',
+  flag: COUNTRIES[0].color, country: COUNTRIES[0].name,
+  flagSpec: COUNTRIES[0].flag,
 };
 
 // damage / stats derived from upgrades
@@ -300,8 +358,23 @@ renderer.shadowMap.enabled = true;
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x8fd0ff);
-scene.fog = new THREE.Fog(0x8fd0ff, 60, 180);
+// gradient sky texture
+function makeSky(){
+  const c=document.createElement('canvas'); c.width=16; c.height=256;
+  const g=c.getContext('2d').createLinearGradient(0,0,0,256);
+  g.addColorStop(0,'#2b6fd6'); g.addColorStop(0.45,'#69b6ff'); g.addColorStop(0.8,'#bfe6ff'); g.addColorStop(1,'#e9f7ff');
+  const ctx=c.getContext('2d'); ctx.fillStyle=g; ctx.fillRect(0,0,16,256);
+  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+const skyClear = makeSky();
+scene.background = skyClear;
+scene.fog = new THREE.Fog(0xbfe6ff, 80, 200);
+
+// big glowing sun
+const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(14,32), new THREE.MeshBasicMaterial({color:0xfff3c0}));
+sunDisc.position.set(-60,55,-150); scene.add(sunDisc);
+const sunGlow = new THREE.Mesh(new THREE.CircleGeometry(22,32), new THREE.MeshBasicMaterial({color:0xfff3c0, transparent:true, opacity:0.3}));
+sunGlow.position.set(-60,55,-151); scene.add(sunGlow);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 500);
 camera.position.set(0, 7, 24);
@@ -316,18 +389,36 @@ sun.shadow.camera.left=-80; sun.shadow.camera.right=80; sun.shadow.camera.top=80
 scene.add(sun);
 scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x4a7a3a, 0.8));
 
-// ground
+// ground — checkered grass for a fun look
+function makeGrass(){
+  const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d');
+  x.fillStyle='#5aa83f'; x.fillRect(0,0,64,64);
+  x.fillStyle='#52a038'; x.fillRect(0,0,32,32); x.fillRect(32,32,32,32);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(60,60); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(400, 400),
-  new THREE.MeshStandardMaterial({ color:0x4f8a3a })
+  new THREE.MeshStandardMaterial({ map:makeGrass() })
 );
 ground.rotation.x = -Math.PI/2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// a darker enemy zone far away + clouds + mountains for depth
-const enemyZone = new THREE.Mesh(new THREE.PlaneGeometry(400,120), new THREE.MeshStandardMaterial({ color:0x6b5a3a }));
+// enemy zone (scorched land) far away
+const enemyZone = new THREE.Mesh(new THREE.PlaneGeometry(400,120), new THREE.MeshStandardMaterial({ color:0x7a6438 }));
 enemyZone.rotation.x = -Math.PI/2; enemyZone.position.set(0,0.02,-110); scene.add(enemyZone);
+
+// fun decorative trees scattered on our side
+function addTree(x,z){
+  const g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,2.5,6), new THREE.MeshStandardMaterial({color:0x7a4a1e}));
+  trunk.position.y=1.25; g.add(trunk);
+  const leaf=new THREE.Mesh(new THREE.ConeGeometry(2.2,4,8), new THREE.MeshStandardMaterial({color:0x2f8f3a, flatShading:true}));
+  leaf.position.y=4; g.add(leaf);
+  g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+  g.position.set(x,0,z); scene.add(g);
+}
+[[-40,28],[40,30],[-52,10],[52,12],[-30,40],[33,42]].forEach(p=>addTree(p[0],p[1]));
 
 function addMountain(x,z,s,c){
   const m = new THREE.Mesh(new THREE.ConeGeometry(s, s*1.3, 6), new THREE.MeshStandardMaterial({color:c, flatShading:true}));
@@ -362,8 +453,8 @@ function buildBase(){
   // flag pole + flag colored by player
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,7,6), new THREE.MeshStandardMaterial({color:0x553311}));
   pole.position.set(4.2,4.5,1); baseGroup.add(pole);
-  flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.6), new THREE.MeshStandardMaterial({color:G.flag, side:THREE.DoubleSide}));
-  flagMesh.position.set(5.6,7,1); baseGroup.add(flagMesh);
+  flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.2,2.0), new THREE.MeshStandardMaterial({map:flagTexture(G.flagSpec), side:THREE.DoubleSide}));
+  flagMesh.position.set(5.8,7,1); baseGroup.add(flagMesh);
   baseGroup.position.set(0,0,18);
   scene.add(baseGroup);
 }
@@ -589,7 +680,7 @@ function startRain(){
   weather.rain = 8;            // detik hujan
   cd.rain = CD_MAX.rain;
   rainPoints.visible=true;
-  scene.background.set(0x55708f);
+  scene.background = new THREE.Color(0x55708f);
   scene.fog.near=30; scene.fog.far=120;
   Sound.rain();
   toast('🌧️ HUJAN! Musuh tak bisa melihat kita!');
@@ -633,8 +724,10 @@ function damageEnemy(i, dmg){
   const e = enemies[i]; if(!e) return;
   e.hp -= dmg;
   if(e.hp<=0){
-    explosion(e.mesh.position.clone(), e.type==='tank'?1.6:1.2);
+    const p=e.mesh.position.clone();
+    explosion(p.clone(), e.type==='tank'?1.6:1.2);
     Sound.explosion();
+    popText(p.clone().setY(p.y+3), '+'+e.reward+' 🪙', '#ffd54a');
     scene.remove(e.mesh);
     enemies.splice(i,1);
     G.kills++;
@@ -644,6 +737,19 @@ function damageEnemy(i, dmg){
 }
 
 function addCoins(n){ G.coins+=n; updateHUD(); Sound.coin(); }
+
+// floating "+N 🪙" text at a 3D position
+function popText(world, text, color){
+  const v = world.clone().project(camera);
+  if(v.z>1) return;
+  const d=document.createElement('div'); d.className='pop'; d.textContent=text;
+  d.style.color=color||'#ffd54a';
+  d.style.left=((v.x*0.5+0.5)*innerWidth)+'px';
+  d.style.top=((-v.y*0.5+0.5)*innerHeight)+'px';
+  document.body.appendChild(d);
+  requestAnimationFrame(()=>{ d.style.transform='translate(-50%,-70px)'; d.style.opacity='0'; });
+  setTimeout(()=>d.remove(),800);
+}
 
 function damageEnemyBase(n){
   G.enemyBase = Math.max(0, G.enemyBase-n);
@@ -885,8 +991,8 @@ function allyShoot(from, to){
 function stopRain(){
   weather.rain=0;
   if(rainPoints) rainPoints.visible=false;
-  scene.background.set(0x8fd0ff);
-  scene.fog.near=60; scene.fog.far=180;
+  scene.background = skyClear;
+  scene.fog.near=80; scene.fog.far=200;
 }
 
 function updateAbilityHUD(){
@@ -945,12 +1051,39 @@ function renderShop(){
 // =========================================================
 //  UI wiring
 // =========================================================
-// flag picker
+// country picker (real flags)
+const countryPick = el('countryPick');
+COUNTRIES.forEach((co,i)=>{
+  const tile=document.createElement('div'); tile.className='countryTile'+(i===0?' sel':'');
+  const cv=document.createElement('canvas'); cv.width=92; cv.height=62;
+  paintFlag(cv.getContext('2d'), 92, 62, co.flag);
+  const nm=document.createElement('span'); nm.textContent=co.name;
+  tile.appendChild(cv); tile.appendChild(nm);
+  tile.onclick=()=>{
+    G.country=co.name; G.flag=co.color; G.flagSpec=co.flag;
+    el('nameInput').value=co.name;
+    document.querySelectorAll('.countryTile').forEach(x=>x.classList.remove('sel'));
+    document.querySelectorAll('.flagopt').forEach(x=>x.classList.remove('sel'));
+    tile.classList.add('sel');
+  };
+  countryPick.appendChild(tile);
+});
+
+// custom toggle
+el('customToggle').onclick = ()=>{ el('customBox').classList.toggle('hidden'); };
+
+// flag color picker (custom)
 const flagPick = el('flagPick');
 FLAG_COLORS.forEach((c,i)=>{
-  const d=document.createElement('div'); d.className='flagopt'+(i===0?' sel':'');
+  const d=document.createElement('div'); d.className='flagopt';
   d.style.background='#'+c.toString(16).padStart(6,'0');
-  d.onclick=()=>{ G.flag=c; document.querySelectorAll('.flagopt').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); };
+  d.onclick=()=>{
+    G.flag=c; G.flagSpec={type:'solid', colors:['#'+c.toString(16).padStart(6,'0')]};
+    G.country = (el('nameInput').value||'Negaraku').trim() || 'Negaraku';
+    document.querySelectorAll('.flagopt').forEach(x=>x.classList.remove('sel'));
+    document.querySelectorAll('.countryTile').forEach(x=>x.classList.remove('sel'));
+    d.classList.add('sel');
+  };
   flagPick.appendChild(d);
 });
 
