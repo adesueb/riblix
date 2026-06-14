@@ -41,6 +41,13 @@
   .abtn small { font-size:11px; margin-top:2px; }
   .abtn:active { transform:scale(.9); }
   .abtn:disabled { opacity:.4; filter:grayscale(.6); }
+  .abilityGrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .abtn.small { width:58px; height:58px; font-size:24px; border-width:2px; position:relative; overflow:hidden; }
+  .abtn.small small { font-size:9px; margin-top:1px; }
+  .abtn .cd { position:absolute; inset:0; background:rgba(0,0,0,.6); color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; }
+  #rainBtn { background:radial-gradient(circle at 30% 30%,#7ec8ff,#1565c0); }
+  #quakeBtn { background:radial-gradient(circle at 30% 30%,#d8b48c,#795548); }
+  #allyBtn { background:radial-gradient(circle at 30% 30%,#9ccc65,#33691e); }
   #fireBtn { background:radial-gradient(circle at 30% 30%,#ff8a8a,#e53935); width:96px; height:96px; font-size:40px; }
   #bombBtn { background:radial-gradient(circle at 30% 30%,#ffd56b,#f9a825); }
   #nukeBtn { background:radial-gradient(circle at 30% 30%,#c08bff,#7b1fa2); }
@@ -110,6 +117,7 @@
       <span class="barLabel" style="text-align:right">💥 Markas Musuh</span>
       <div class="bar"><i id="enemyFill"></i></div>
       <div class="badge">🌊 Gelombang <span id="waveNum">1</span></div>
+      <div class="badge hidden" id="weatherBadge" style="background:rgba(40,80,140,.6)"></div>
     </div>
   </div>
 </div>
@@ -118,8 +126,13 @@
 
 <button id="shopBtn">🛒 Toko</button>
 <div class="actions">
-  <button class="abtn" id="nukeBtn">☢️<small id="nukeCount">x0</small></button>
-  <button class="abtn" id="bombBtn">💣<small id="bombCount">x0</small></button>
+  <div class="abilityGrid">
+    <button class="abtn small" id="rainBtn">🌧️<small>Hujan</small></button>
+    <button class="abtn small" id="quakeBtn">🌍<small>Gempa</small></button>
+    <button class="abtn small" id="allyBtn">🪖<small>Pasukan</small></button>
+    <button class="abtn small" id="nukeBtn">☢️<small id="nukeCount">x0</small></button>
+    <button class="abtn small" id="bombBtn">💣<small id="bombCount">x0</small></button>
+  </div>
   <button class="abtn" id="fireBtn">🔫</button>
 </div>
 
@@ -145,6 +158,9 @@
       • Hancurkan <b>tank 🚜, pesawat ✈️, dan rudal 🚀</b> musuh.<br>
       • Tiap musuh kalah = dapat <b>koin 🪙</b>.<br>
       • Buka <b>🛒 Toko</b> untuk upgrade & beli 💣 bom / ☢️ nuklir.<br>
+      • <b>🌧️ Hujan</b>: musuh tak bisa lihat kita → berhenti menembak!<br>
+      • <b>🌍 Gempa</b>: pesawat musuh jatuh & tank rusak parah!<br>
+      • <b>🪖 Pasukan</b>: terjunkan tentara kita untuk menyerang musuh!<br>
       • Jaga <b>🛡️ perisai markas</b>, habiskan <b>markas musuh</b> untuk MENANG!
     </div>
   </div>
@@ -228,6 +244,9 @@ const Sound = (function(){
     wave(){ tone(440,.12,'triangle',.2); setTimeout(()=>tone(660,.15,'triangle',.2),120); },
     win(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.25,'triangle',.25),i*140)); },
     lose(){ [400,330,250,160].forEach((f,i)=>setTimeout(()=>tone(f,.3,'sawtooth',.22),i*160)); },
+    rain(){ noise(1.2,.25,2500); },
+    quake(){ noise(1.4,.6,260); tone(45,1.4,'sine',.4,28); },
+    deploy(){ tone(523,.1,'square',.18); setTimeout(()=>tone(784,.14,'square',.18),100); },
     toggle(){ muted=!muted; return muted; },
     isMuted(){ return muted; },
   };
@@ -370,9 +389,17 @@ scene.add(enemyBaseGroup);
 const enemies = [];   // {mesh, type, hp, hpMax, speed, fireT, reward}
 const bullets = [];   // player projectiles {mesh, vel, dmg, life}
 const eBullets = [];  // enemy projectiles {mesh, vel, life}
+const allies = [];    // friendly soldiers {mesh, hp, fireT, life, gun}
+const allyBullets = [];// friendly soldier bullets {mesh, vel, dmg, life}
 const fx = [];        // particles {mesh, vel, life, fade}
 
+// weather + ability cooldowns (seconds)
+const weather = { rain:0, quake:0, shake:0 };
+const cd = { rain:0, quake:0, ally:0 };
+const CD_MAX = { rain:14, quake:18, ally:9 };
+
 const tmpV = new THREE.Vector3();
+const tmpV2 = new THREE.Vector3();
 
 function makeTank(){
   const g = new THREE.Group();
@@ -404,20 +431,34 @@ function makeMissile(){
   nose.rotation.x=Math.PI/2; nose.position.z=2.3; g.add(nose);
   return g;
 }
+function makeSoldier(bodyColor, helmetColor){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.5,1.1,4,8), new THREE.MeshStandardMaterial({color:bodyColor, flatShading:true}));
+  body.position.y=1.3; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.42,10,8), new THREE.MeshStandardMaterial({color:0xf0c9a0}));
+  head.position.y=2.4; g.add(head);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.46,10,8,0,Math.PI*2,0,Math.PI/2), new THREE.MeshStandardMaterial({color:helmetColor}));
+  helmet.position.y=2.55; g.add(helmet);
+  const gun = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.18,1.6), new THREE.MeshStandardMaterial({color:0x222}));
+  gun.position.set(0.4,1.5,0.6); g.add(gun);
+  g.scale.set(1.4,1.4,1.4);
+  return g;
+}
 
 function spawnEnemy(type){
   let mesh, hp, speed, reward, scale;
   const lvlBoost = 1 + (G.wave-1)*0.18;
   if(type==='tank'){ mesh=makeTank(); hp=55*lvlBoost; speed=2.2; reward=10; }
   else if(type==='jet'){ mesh=makeJet(); hp=38*lvlBoost; speed=7.0; reward=14; }
+  else if(type==='soldier'){ mesh=makeSoldier(0x8a3b2f, 0x5a2a20); hp=24*lvlBoost; speed=3.0; reward=8; }
   else { mesh=makeMissile(); hp=22*lvlBoost; speed=9.0; reward=18; }
 
   const x = (Math.random()*2-1)*36;
-  const y = type==='tank' ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
+  const y = (type==='tank'||type==='soldier') ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
   mesh.position.set(x, y, -100 - Math.random()*15);
   mesh.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
   scene.add(mesh);
-  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, fireT: 1+Math.random()*2 });
+  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, fireT: 1+Math.random()*2, vy:0 });
 }
 
 // =========================================================
@@ -524,6 +565,68 @@ function useNuke(){
 }
 
 // =========================================================
+//  Rain, Earthquake, Deploy Soldiers
+// =========================================================
+// rain particle system (one cloud of points, shown only while raining)
+let rainPoints=null;
+(function buildRain(){
+  const N=1400, pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    pos[i*3]   = (Math.random()*2-1)*120;
+    pos[i*3+1] = Math.random()*70;
+    pos[i*3+2] = -40 - Math.random()*120;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:0xaad4ff, size:0.5, transparent:true, opacity:0.8});
+  rainPoints=new THREE.Points(geo, mat);
+  rainPoints.visible=false;
+  scene.add(rainPoints);
+})();
+
+function startRain(){
+  if(!G.running || cd.rain>0) return;
+  weather.rain = 8;            // detik hujan
+  cd.rain = CD_MAX.rain;
+  rainPoints.visible=true;
+  scene.background.set(0x55708f);
+  scene.fog.near=30; scene.fog.far=120;
+  Sound.rain();
+  toast('🌧️ HUJAN! Musuh tak bisa melihat kita!');
+}
+
+function startQuake(){
+  if(!G.running || cd.quake>0) return;
+  weather.quake = 3;          // durasi getaran
+  weather.shake = 3;
+  cd.quake = CD_MAX.quake;
+  Sound.quake();
+  flashScreen();
+  toast('🌍 GEMPA BUMI!');
+  // pesawat & rudal jatuh, tank & tentara rusak parah
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    if(e.type==='jet' || e.type==='missile'){ e.falling=true; e.vy=0; }
+    else { damageEnemy(i, e.hpMax*0.7); } // tank/soldier rusak parah
+  }
+}
+
+function deployAllies(){
+  if(!G.running || cd.ally>0) return;
+  cd.ally = CD_MAX.ally;
+  Sound.deploy();
+  toast('🪖 Pasukan diterjunkan!');
+  const n=4;
+  for(let i=0;i<n;i++){
+    const mesh=makeSoldier(0x2f6b3b, G.flag); // seragam hijau, helm warna bendera kita
+    mesh.position.set((i-(n-1)/2)*3, 0, baseGroup.position.z-4);
+    mesh.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+    scene.add(mesh);
+    allies.push({ mesh, hp:40, fireT:0.5+Math.random()*0.6, life:18 });
+  }
+}
+
+// =========================================================
 //  Damage handling
 // =========================================================
 function damageEnemy(i, dmg){
@@ -595,8 +698,9 @@ function startWave(){
 }
 function pickType(){
   const r=Math.random();
-  if(G.wave>=3 && r<0.25) return 'missile';
-  if(r<0.55) return 'tank';
+  if(G.wave>=3 && r<0.18) return 'missile';
+  if(r<0.30) return 'soldier';
+  if(r<0.62) return 'tank';
   return 'jet';
 }
 
@@ -608,17 +712,42 @@ function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  // recoil recover
+  // recoil recover (z)
   camera.position.z += (24 - camera.position.z)*Math.min(1,dt*10);
+  // earthquake camera shake (x,y)
+  if(weather.shake>0){
+    const s = Math.min(1, weather.shake/3) * 0.9;
+    camera.position.x = (Math.random()*2-1)*s*1.4;
+    camera.position.y = 7 + (Math.random()*2-1)*s*1.0;
+  } else {
+    camera.position.x += (0-camera.position.x)*Math.min(1,dt*8);
+    camera.position.y += (7-camera.position.y)*Math.min(1,dt*8);
+  }
 
   // clouds drift
   for(const c of clouds){ c.position.x += c.userData.spd*dt; if(c.position.x>130) c.position.x=-130; }
+
+  // rain falling
+  if(rainPoints && rainPoints.visible){
+    const arr=rainPoints.geometry.attributes.position.array;
+    for(let i=1;i<arr.length;i+=3){ arr[i]-=75*dt; if(arr[i]<0) arr[i]=70; }
+    rainPoints.geometry.attributes.position.needsUpdate=true;
+  }
 
   if(flagMesh) flagMesh.rotation.y = Math.sin(performance.now()*0.002)*0.3;
   enemyBaseGroup.rotation.y += dt*0.1;
 
   if(G.running){
     updateAimPoint();
+
+    // weather + cooldown timers
+    if(cd.rain>0) cd.rain=Math.max(0,cd.rain-dt);
+    if(cd.quake>0) cd.quake=Math.max(0,cd.quake-dt);
+    if(cd.ally>0) cd.ally=Math.max(0,cd.ally-dt);
+    if(weather.rain>0){ weather.rain-=dt; if(weather.rain<=0) stopRain(); }
+    if(weather.quake>0) weather.quake-=dt;
+    if(weather.shake>0) weather.shake-=dt;
+    updateAbilityHUD();
 
     // aim cannon barrel toward aim point
     if(baseGroup){
@@ -654,10 +783,24 @@ function animate(){
 
     // enemies move + shoot
     const baseP = baseGroup.position;
+    const onGround = t => t==='tank'||t==='soldier';
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i]; const m=e.mesh;
+
+      // falling (knocked down by earthquake)
+      if(e.falling){
+        e.vy -= 34*dt; m.position.y += e.vy*dt;
+        m.rotation.z += dt*5; m.rotation.x += dt*4;
+        if(m.position.y<=0){
+          explosion(m.position.clone(),1.4); Sound.explosion();
+          scene.remove(m); enemies.splice(i,1);
+          G.kills++; addCoins(e.reward); damageEnemyBase(4);
+        }
+        continue;
+      }
+
       // move toward base
-      tmpV.copy(baseP).sub(m.position); tmpV.y = e.type==='tank'?0:tmpV.y*0.15;
+      tmpV.copy(baseP).sub(m.position); tmpV.y = onGround(e.type)?0:tmpV.y*0.15;
       const d = tmpV.length(); tmpV.normalize();
       m.position.addScaledVector(tmpV, e.speed*dt);
       // face direction
@@ -666,16 +809,39 @@ function animate(){
 
       // reached base -> damage shield
       if(d < 14){
-        damageShield(e.type==='missile'?22: e.type==='jet'?12:14);
+        damageShield(e.type==='missile'?22: e.type==='jet'?12: e.type==='soldier'?8:14);
         explosion(m.position.clone(),1.2,0xff3030);
         scene.remove(m); enemies.splice(i,1); continue;
       }
-      // shoot at base
+      // shoot at base — TIDAK saat hujan (musuh tak bisa lihat kita)
       e.fireT -= dt;
-      if(e.fireT<=0 && d<90){
+      if(weather.rain<=0 && e.fireT<=0 && d<90){
         e.fireT = e.type==='jet'?1.6:2.4;
         enemyShoot(m.position.clone());
       }
+    }
+
+    // === pasukan kita (allies) ===
+    for(let i=allies.length-1;i>=0;i--){
+      const a=allies[i]; const m=a.mesh; a.life-=dt;
+      // cari musuh terdekat (yang belum jatuh)
+      let target=null, bd=1e9;
+      for(const e of enemies){ if(e.falling) continue; const dd=m.position.distanceTo(e.mesh.position); if(dd<bd){ bd=dd; target=e; } }
+      if(target){
+        tmpV2.copy(target.mesh.position).sub(m.position); const dist=tmpV2.length(); tmpV2.y=0; tmpV2.normalize();
+        m.rotation.y = Math.atan2(tmpV2.x, tmpV2.z);
+        if(dist>18){ m.position.addScaledVector(tmpV2, 7*dt); }
+        else { a.fireT-=dt; if(a.fireT<=0){ a.fireT=0.6; allyShoot(m.position.clone().setY(1.6), target.mesh.position.clone()); } }
+      } else { m.position.z -= 6*dt; m.rotation.y=Math.PI; }
+      if(a.life<=0 || m.position.z < -116){ scene.remove(m); allies.splice(i,1); }
+    }
+
+    // ally bullets
+    for(let i=allyBullets.length-1;i>=0;i--){
+      const b=allyBullets[i]; b.mesh.position.addScaledVector(b.vel,dt); b.life-=dt;
+      let hit=false;
+      for(let j=enemies.length-1;j>=0;j--){ if(b.mesh.position.distanceTo(enemies[j].mesh.position)<3){ damageEnemy(j,b.dmg); hit=true; break; } }
+      if(hit || b.life<=0){ scene.remove(b.mesh); allyBullets.splice(i,1); }
     }
 
     // enemy bullets
@@ -707,6 +873,38 @@ function enemyShoot(from){
   const b = new THREE.Mesh(new THREE.SphereGeometry(0.45,6,6), new THREE.MeshBasicMaterial({color:0xff3b30}));
   b.position.copy(from); scene.add(b);
   eBullets.push({ mesh:b, vel:dir.multiplyScalar(34), life:5 });
+}
+
+function allyShoot(from, to){
+  const dir = to.sub(from).normalize();
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.32,6,6), new THREE.MeshBasicMaterial({color:0x9fff5a}));
+  b.position.copy(from); scene.add(b);
+  allyBullets.push({ mesh:b, vel:dir.multiplyScalar(95), dmg:16, life:2 });
+}
+
+function stopRain(){
+  weather.rain=0;
+  if(rainPoints) rainPoints.visible=false;
+  scene.background.set(0x8fd0ff);
+  scene.fog.near=60; scene.fog.far=180;
+}
+
+function updateAbilityHUD(){
+  setCd('rainBtn', cd.rain);
+  setCd('quakeBtn', cd.quake);
+  setCd('allyBtn', cd.ally);
+  const wb=el('weatherBadge');
+  if(weather.rain>0){ wb.classList.remove('hidden'); wb.textContent='🌧️ Hujan '+Math.ceil(weather.rain)+'s'; }
+  else if(weather.quake>0){ wb.classList.remove('hidden'); wb.textContent='🌍 GEMPA!'; }
+  else wb.classList.add('hidden');
+}
+function setCd(id, t){
+  const btn=el(id); if(!btn) return;
+  let ov=btn.querySelector('.cd');
+  if(t>0.05){
+    if(!ov){ ov=document.createElement('div'); ov.className='cd'; btn.appendChild(ov); }
+    ov.textContent=Math.ceil(t);
+  } else if(ov){ ov.remove(); }
 }
 
 // =========================================================
@@ -764,6 +962,9 @@ el('fireBtn').addEventListener('pointerdown', e=>{ e.preventDefault(); holdFire=
 el('fireBtn').addEventListener('pointerup', ()=>holdFire=false);
 el('bombBtn').onclick = useBomb;
 el('nukeBtn').onclick = useNuke;
+el('rainBtn').onclick = startRain;
+el('quakeBtn').onclick = startQuake;
+el('allyBtn').onclick = deployAllies;
 el('muteBtn').onclick = ()=>{ const m=Sound.toggle(); el('muteBtn').textContent = m?'🔇':'🔊'; };
 
 let holdFire=false;
@@ -780,6 +981,12 @@ function startGame(){
   el('countryName').textContent = G.country;
   el('flagDot').style.background = '#'+G.flag.toString(16).padStart(6,'0');
   G.shield = stats.shieldMax; G.shieldMax = stats.shieldMax;
+  // reset cuaca, cooldown, pasukan
+  weather.rain=0; weather.quake=0; weather.shake=0;
+  cd.rain=0; cd.quake=0; cd.ally=0;
+  stopRain();
+  allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
+  allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
   buildBase();
   el('startScreen').classList.add('hidden');
   G.running=true;
@@ -792,6 +999,9 @@ function endGame(win){
   // clear field
   enemies.forEach(e=>scene.remove(e.mesh)); enemies.length=0;
   eBullets.forEach(b=>scene.remove(b.mesh)); eBullets.length=0;
+  allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
+  allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
+  stopRain();
   win ? Sound.win() : Sound.lose();
   // update & save high score
   let isRecord=false;
@@ -831,6 +1041,9 @@ addEventListener('keydown', e=>{
   if(e.code==='Space'){ e.preventDefault(); fire(); }
   if(e.code==='KeyB') useBomb();
   if(e.code==='KeyN') useNuke();
+  if(e.code==='KeyR') startRain();
+  if(e.code==='KeyG') startQuake();
+  if(e.code==='KeyT') deployAllies();
 });
 // mouse aim on desktop without dragging
 addEventListener('mousemove', e=>{ if(G.running && !('ontouchstart' in window)) pointerMove(e.clientX,e.clientY); });
