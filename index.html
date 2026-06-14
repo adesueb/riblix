@@ -33,27 +33,27 @@
   #cross::after { top:50%; left:6px; right:6px; height:3px; margin-top:-1.5px; }
   #cross b { position:absolute; inset:0; border:3px solid rgba(126,240,255,.55); border-radius:50%; }
 
-  /* action buttons */
-  .actions { position:fixed; right:12px; bottom:18px; display:flex; flex-direction:column; gap:12px; z-index:11; }
-  .abtn { pointer-events:auto; width:74px; height:74px; border-radius:50%; border:3px solid rgba(255,255,255,.5);
-          font-size:30px; font-weight:bold; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
-          box-shadow:0 6px 16px rgba(0,0,0,.5); cursor:pointer; line-height:1; transition:transform .08s; }
-  .abtn small { font-size:11px; margin-top:2px; }
-  .abtn:active { transform:scale(.9); }
-  .abtn:disabled { opacity:.4; filter:grayscale(.6); }
-  .abilityGrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .abtn.small { width:58px; height:58px; font-size:24px; border-width:2px; position:relative; overflow:hidden; }
-  .abtn.small small { font-size:9px; margin-top:1px; }
-  .abtn .cd { position:absolute; inset:0; background:rgba(0,0,0,.6); color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; }
-  #rainBtn { background:radial-gradient(circle at 30% 30%,#7ec8ff,#1565c0); }
-  #quakeBtn { background:radial-gradient(circle at 30% 30%,#d8b48c,#795548); }
-  #allyBtn { background:radial-gradient(circle at 30% 30%,#9ccc65,#33691e); }
-  #fireBtn { background:radial-gradient(circle at 30% 30%,#ff8a8a,#e53935); width:96px; height:96px; font-size:40px; }
-  #bombBtn { background:radial-gradient(circle at 30% 30%,#ffd56b,#f9a825); }
-  #nukeBtn { background:radial-gradient(circle at 30% 30%,#c08bff,#7b1fa2); }
-  #shopBtn { pointer-events:auto; position:fixed; left:12px; bottom:18px; z-index:11; background:radial-gradient(circle at 30% 30%,#79e07b,#2e7d32);
-             border:3px solid rgba(255,255,255,.5); border-radius:18px; padding:12px 18px; font-size:16px; font-weight:bold; color:#fff; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.5); }
-  #shopBtn:active { transform:scale(.94); }
+  /* cinematic vignette over the 3D scene */
+  #vignette { position:fixed; inset:0; pointer-events:none; z-index:5; box-shadow: inset 0 0 200px 40px rgba(0,0,0,.5); }
+
+  /* bottom dock — keeps the right side of the screen free for aiming */
+  #dock { position:fixed; left:0; right:0; bottom:0; z-index:11; display:flex; gap:6px; justify-content:center; align-items:flex-end;
+          padding:8px 8px calc(8px + env(safe-area-inset-bottom)); pointer-events:none;
+          background:linear-gradient(to top, rgba(4,12,28,.82), rgba(4,12,28,0)); }
+  .dockBtn { pointer-events:auto; flex:1 1 0; max-width:86px; height:60px; border-radius:14px; border:2px solid rgba(255,255,255,.4);
+             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:24px; color:#fff;
+             box-shadow:0 4px 12px rgba(0,0,0,.5); cursor:pointer; line-height:1; position:relative; overflow:hidden; transition:transform .08s;
+             background:radial-gradient(circle at 30% 22%, rgba(255,255,255,.22), rgba(0,0,0,.3)); text-shadow:0 1px 2px #000; }
+  .dockBtn small { font-size:9px; font-weight:bold; opacity:.95; }
+  .dockBtn:active { transform:scale(.9); }
+  .dockBtn:disabled { opacity:.4; filter:grayscale(.6); }
+  .dockBtn.fire { max-width:120px; height:66px; font-size:32px; border-color:#fff; background:radial-gradient(circle at 30% 22%,#ff9a9a,#e53935); box-shadow:0 0 16px rgba(255,80,80,.6); }
+  .dockBtn.rain  { background:radial-gradient(circle at 30% 22%,#8fd0ff,#1565c0); }
+  .dockBtn.quake { background:radial-gradient(circle at 30% 22%,#e0c099,#795548); }
+  .dockBtn.ally  { background:radial-gradient(circle at 30% 22%,#aadd77,#33691e); }
+  .dockBtn.bomb  { background:radial-gradient(circle at 30% 22%,#ffd877,#f9a825); }
+  .dockBtn.nuke  { background:radial-gradient(circle at 30% 22%,#caa0ff,#7b1fa2); }
+  .dockBtn .cd { position:absolute; inset:0; background:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; }
 
   /* ====== Overlays ====== */
   .screen { position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; padding:18px;
@@ -131,18 +131,17 @@
   </div>
 </div>
 
+<div id="vignette"></div>
 <div id="cross"><b></b></div>
 
-<button id="shopBtn">🛒 Toko</button>
-<div class="actions">
-  <div class="abilityGrid">
-    <button class="abtn small" id="rainBtn">🌧️<small>Hujan</small></button>
-    <button class="abtn small" id="quakeBtn">🌍<small>Gempa</small></button>
-    <button class="abtn small" id="allyBtn">🪖<small>Pasukan</small></button>
-    <button class="abtn small" id="nukeBtn">☢️<small id="nukeCount">x0</small></button>
-    <button class="abtn small" id="bombBtn">💣<small id="bombCount">x0</small></button>
-  </div>
-  <button class="abtn" id="fireBtn">🔫</button>
+<div id="dock">
+  <button class="dockBtn" id="shopBtn">🛒<small>Toko</small></button>
+  <button class="dockBtn rain" id="rainBtn">🌧️<small>Hujan</small></button>
+  <button class="dockBtn quake" id="quakeBtn">🌍<small>Gempa</small></button>
+  <button class="dockBtn ally" id="allyBtn">🪖<small>Pasukan</small></button>
+  <button class="dockBtn bomb" id="bombBtn">💣<small id="bombCount">x0</small></button>
+  <button class="dockBtn nuke" id="nukeBtn">☢️<small id="nukeCount">x0</small></button>
+  <button class="dockBtn fire" id="fireBtn">🔫<small>TEMBAK</small></button>
 </div>
 
 <!-- START / CREATE COUNTRY -->
@@ -536,6 +535,17 @@ function makeSoldier(bodyColor, helmetColor){
   return g;
 }
 
+function makeHpBar(){
+  const g=new THREE.Group();
+  const bg=new THREE.Mesh(new THREE.PlaneGeometry(3,0.45), new THREE.MeshBasicMaterial({color:0x300000}));
+  g.add(bg);
+  const fillG=new THREE.Group(); fillG.position.x=-1.5; g.add(fillG); // pivot di kiri
+  const fill=new THREE.Mesh(new THREE.PlaneGeometry(3,0.4), new THREE.MeshBasicMaterial({color:0x33dd55}));
+  fill.position.set(1.5,0,0.01); fillG.add(fill);
+  g.visible=false;
+  return { group:g, fillG, fill };
+}
+
 function spawnEnemy(type){
   let mesh, hp, speed, reward, scale;
   const lvlBoost = 1 + (G.wave-1)*0.18;
@@ -548,8 +558,12 @@ function spawnEnemy(type){
   const y = (type==='tank'||type==='soldier') ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
   mesh.position.set(x, y, -100 - Math.random()*15);
   mesh.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+  // health bar above the unit
+  const hpbar = makeHpBar();
+  hpbar.group.position.y = type==='tank'?3.6 : type==='soldier'?2.9 : type==='jet'?2.2 : 2.6;
+  mesh.add(hpbar.group);
   scene.add(mesh);
-  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, fireT: 1+Math.random()*2, vy:0 });
+  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, fireT: 1+Math.random()*2, vy:0, hpbar });
 }
 
 // =========================================================
@@ -912,6 +926,13 @@ function animate(){
       // face direction
       m.rotation.y = Math.atan2(tmpV.x, tmpV.z);
       if(e.type==='jet') m.rotation.y += Math.PI; // cone points -z
+
+      // update health bar (billboard toward camera, color by ratio)
+      const ratio = Math.max(0, e.hp/e.hpMax);
+      e.hpbar.group.visible = ratio < 0.999;
+      e.hpbar.fillG.scale.x = Math.max(0.001, ratio);
+      e.hpbar.fill.material.color.setHex(ratio>0.5?0x33dd55 : ratio>0.25?0xffcc33 : 0xff3b30);
+      e.hpbar.group.rotation.y = -m.rotation.y;
 
       // reached base -> damage shield
       if(d < 14){
