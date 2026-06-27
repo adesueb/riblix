@@ -1073,7 +1073,7 @@ function hurtFlash(){ const f=el('flash'); f.style.background='#ff2a2a'; f.style
 // =========================================================
 //  Waves
 // =========================================================
-let spawnTimer=0, toSpawn=0, waveActive=false;
+let spawnTimer=0, toSpawn=0, waveActive=false, waveBreak=0;
 function startWave(){
   waveActive=true;
   toSpawn = 4 + G.wave*2;
@@ -1155,7 +1155,13 @@ function animate(){
       if(spawnTimer<=0){ spawnEnemy(pickType()); toSpawn--; spawnTimer = Math.max(0.4, 1.4 - G.wave*0.05); }
     }
     if(waveActive && toSpawn<=0 && enemies.length===0){
-      waveActive=false; G.wave++; addCoins(15); setTimeout(()=>{ if(G.running) startWave(); },1200);
+      waveActive=false; G.wave++; addCoins(15); waveBreak=1.2; // jeda antar gelombang
+    }
+    // mulai gelombang berikutnya setelah jeda — dihitung di dalam loop (hanya saat main),
+    // jadi membuka Toko hanya menjeda, tidak menghilangkan gelombang berikutnya.
+    if(!waveActive && waveBreak>0){
+      waveBreak -= dt;
+      if(waveBreak<=0){ waveBreak=0; startWave(); }
     }
 
     // bullets
@@ -1468,6 +1474,7 @@ function startGame(){
   weather.rain=0; weather.quake=0; weather.shake=0;
   cd.rain=0; cd.quake=0; cd.ally=0;
   camPan.x=camPan.y=camPan.tx=camPan.ty=0;
+  waveBreak=0;
   stopRain();
   allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
   allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
@@ -1480,7 +1487,7 @@ function startGame(){
 }
 
 function endGame(win){
-  G.running=false; waveActive=false;
+  G.running=false; waveActive=false; waveBreak=0;
   // clear field
   enemies.forEach(e=>scene.remove(e.mesh)); enemies.length=0;
   eBullets.forEach(b=>scene.remove(b.mesh)); eBullets.length=0;
