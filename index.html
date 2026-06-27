@@ -5,17 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0b1e3a" />
 <title>Perang Negara 3D ⚔️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#0b1e3a; font-family:'Trebuchet MS','Segoe UI',sans-serif; color:#fff; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0b1e3a; font-family:'Oxanium','Trebuchet MS','Segoe UI',sans-serif; color:#fff; }
+  .display { font-family:'Black Ops One','Oxanium',sans-serif; letter-spacing:.5px; }
   #game { position:fixed; inset:0; }
   canvas { display:block; }
 
   /* ====== HUD ====== */
   #hud { position:fixed; inset:0; pointer-events:none; z-index:10; }
   .top { position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; gap:8px; }
-  .badge { background:rgba(0,0,0,.45); border:2px solid rgba(255,255,255,.25); border-radius:14px; padding:6px 12px; font-weight:bold; font-size:15px; backdrop-filter:blur(4px); display:flex; align-items:center; gap:6px; }
-  .coins { color:#ffd54a; }
+  .badge { background:linear-gradient(180deg,rgba(20,40,72,.72),rgba(4,12,28,.72)); border:1.5px solid rgba(126,240,255,.35); border-radius:12px; padding:6px 12px; font-weight:800; font-size:14px; letter-spacing:.4px; backdrop-filter:blur(6px); display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12); }
+  .coins { color:#ffd54a; text-shadow:0 0 8px rgba(255,213,74,.5); }
   #flagDot { width:18px; height:18px; border-radius:5px; border:2px solid #fff; display:inline-block; }
 
   /* shield + wave */
@@ -24,14 +28,19 @@
   .bar > i { display:block; height:100%; width:100%; transition:width .15s; }
   #shieldFill { background:linear-gradient(90deg,#33c1ff,#7ef0ff); }
   #enemyFill { background:linear-gradient(90deg,#ff5252,#ff9d52); }
-  .barLabel { font-size:11px; opacity:.85; text-shadow:0 1px 2px #000; }
+  .barLabel { font-size:11px; opacity:.9; text-shadow:0 1px 2px #000; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
 
   /* crosshair */
   #cross { position:fixed; width:46px; height:46px; margin:-23px 0 0 -23px; pointer-events:none; z-index:9; transition:transform .05s; }
   #cross::before, #cross::after { content:''; position:absolute; background:#7ef0ff; box-shadow:0 0 6px #7ef0ff; }
   #cross::before { left:50%; top:6px; bottom:6px; width:3px; margin-left:-1.5px; }
   #cross::after { top:50%; left:6px; right:6px; height:3px; margin-top:-1.5px; }
-  #cross b { position:absolute; inset:0; border:3px solid rgba(126,240,255,.55); border-radius:50%; }
+  #cross b { position:absolute; inset:0; border:3px solid rgba(126,240,255,.55); border-radius:50%; transition:border-color .1s; }
+  /* lock-on: crosshair turns red & pulses when a target is in aim-assist range */
+  #cross.lock { transform:scale(1.12); }
+  #cross.lock::before, #cross.lock::after { background:#ff5a4d; box-shadow:0 0 8px #ff5a4d; }
+  #cross.lock b { border-color:#ff5a4d; box-shadow:0 0 12px rgba(255,90,77,.7); animation:lockPulse .6s ease-in-out infinite; }
+  @keyframes lockPulse { 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.15);} }
 
   /* cinematic vignette over the 3D scene */
   #vignette { position:fixed; inset:0; pointer-events:none; z-index:5; box-shadow: inset 0 0 200px 40px rgba(0,0,0,.5); }
@@ -47,7 +56,9 @@
   .dockBtn small { font-size:9px; font-weight:bold; opacity:.95; }
   .dockBtn:active { transform:scale(.9); }
   .dockBtn:disabled { opacity:.4; filter:grayscale(.6); }
+  .dockBtn small { text-transform:uppercase; letter-spacing:.5px; }
   .dockBtn.fire { max-width:120px; height:66px; font-size:32px; border-color:#fff; background:radial-gradient(circle at 30% 22%,#ff9a9a,#e53935); box-shadow:0 0 16px rgba(255,80,80,.6); }
+  .dockBtn.fire small { font-family:'Black Ops One','Oxanium',sans-serif; font-size:11px; }
   .dockBtn.rain  { background:radial-gradient(circle at 30% 22%,#8fd0ff,#1565c0); }
   .dockBtn.quake { background:radial-gradient(circle at 30% 22%,#e0c099,#795548); }
   .dockBtn.ally  { background:radial-gradient(circle at 30% 22%,#aadd77,#33691e); }
@@ -92,10 +103,10 @@
   .panel { width:100%; max-width:460px; margin:auto; background:rgba(10,24,48,.92); border:3px solid rgba(126,240,255,.35); border-radius:22px; padding:22px; box-shadow:0 12px 40px rgba(0,0,0,.6); }
   @keyframes pulse { 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.04);} }
   @keyframes glow { 0%,100%{ text-shadow:0 2px 0 #000, 0 0 12px rgba(126,240,255,.5);} 50%{ text-shadow:0 2px 0 #000, 0 0 22px rgba(255,213,74,.8);} }
-  .panel h1 { text-align:center; font-size:30px; margin-bottom:4px; text-shadow:0 2px 0 #000; animation:glow 2.5s ease-in-out infinite; }
-  .bigbtn { animation:pulse 1.8s ease-in-out infinite; }
-  .panel h1 .em { font-size:32px; }
-  .sub { text-align:center; opacity:.85; margin-bottom:16px; font-size:14px; }
+  .panel h1 { font-family:'Black Ops One','Oxanium',sans-serif; text-align:center; font-size:32px; line-height:1.1; margin-bottom:4px; letter-spacing:1px; text-transform:uppercase; text-shadow:0 2px 0 #000; animation:glow 2.5s ease-in-out infinite; }
+  .bigbtn { animation:pulse 1.8s ease-in-out infinite; font-family:'Black Ops One','Oxanium',sans-serif; letter-spacing:1px; }
+  .panel h1 .em { font-size:30px; }
+  .sub { text-align:center; opacity:.85; margin-bottom:16px; font-size:14px; letter-spacing:.3px; }
   label.fld { display:block; margin:12px 0 6px; font-weight:bold; font-size:14px; }
   input[type=text] { width:100%; padding:12px 14px; border-radius:12px; border:2px solid rgba(255,255,255,.3); background:rgba(0,0,0,.35); color:#fff; font-size:16px; }
   .countryGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px; }
@@ -125,13 +136,14 @@
   .buy:disabled { opacity:.45; box-shadow:none; }
   .lvl { font-size:11px; color:#7ef0ff; }
 
-  #endTitle { font-size:40px; }
+  #endTitle { font-family:'Black Ops One','Oxanium',sans-serif; font-size:40px; letter-spacing:1px; }
   .stat { text-align:center; font-size:16px; margin:6px 0; }
   .hidden { display:none !important; }
 
   /* floating toast */
-  #toast { position:fixed; left:50%; top:18%; transform:translateX(-50%); z-index:40; pointer-events:none;
-           background:rgba(0,0,0,.7); border:2px solid rgba(255,255,255,.3); border-radius:14px; padding:10px 18px; font-weight:bold; font-size:18px;
+  #toast { position:fixed; left:50%; top:16%; transform:translateX(-50%); z-index:40; pointer-events:none;
+           background:linear-gradient(180deg,rgba(20,40,72,.92),rgba(6,16,36,.92)); border:1.5px solid rgba(126,240,255,.45); border-radius:14px; padding:10px 20px;
+           font-family:'Black Ops One','Oxanium',sans-serif; letter-spacing:.6px; font-size:17px; box-shadow:0 6px 22px rgba(0,0,0,.5);
            opacity:0; transition:opacity .25s, transform .25s; }
   #toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
   .flash { position:fixed; inset:0; background:#fff; z-index:20; pointer-events:none; opacity:0; }
@@ -198,7 +210,7 @@
 <div class="screen" id="startScreen">
   <div class="panel">
     <h1><span class="em">⚔️</span> PERANG NEGARA <span class="em">⚔️</span></h1>
-    <p class="sub">Buat negaramu sendiri, lalu kalahkan negara musuh!</p>
+    <p class="sub">Pilih negaramu & bertahan dari serbuan musuh tanpa henti — sejauh mana kamu sanggup?</p>
     <div id="bestBox" class="how hidden" style="text-align:center; margin-top:0; margin-bottom:6px;">🏆 <b>Rekor Tertinggi</b><br><span id="bestText"></span></div>
 
     <label class="fld">🌍 Pilih Negaramu</label>
@@ -216,17 +228,15 @@
 
     <div class="how">
       <b>Cara main:</b><br>
-      • Geser layar untuk <b>membidik</b>.<br>
-      • Tekan 🔫 (atau klik / Spasi) untuk <b>menembak</b>.<br>
+      • Mode <b>bertahan tanpa batas</b> — gelombang musuh datang terus & makin kuat. Bertahanlah selama mungkin!<br>
+      • Arahkan crosshair ke musuh & tekan 🔫 — ada <b>bantuan bidik otomatis</b> (crosshair jadi 🔴 saat terkunci).<br>
       • Pakai <b>tombol panah ◀▲▼▶</b> (atau WASD / panah keyboard) untuk <b>menjelajah peta</b>.<br>
-      • Hancurkan <b>tank 🚜, pesawat ✈️, dan rudal 🚀</b> musuh.<br>
-      • Tiap musuh kalah = dapat <b>koin 🪙</b>.<br>
-      • Buka <b>🛒 Toko</b> untuk upgrade & beli 💣 bom / 🌪️ tornado / ☢️ nuklir.<br>
+      • Hancurkan <b>tank 🚜, pesawat ✈️, rudal 🚀</b> & <b>BOSS 💀</b> (tiap gelombang ke-5).<br>
+      • Tiap musuh kalah = dapat <b>koin 🪙</b>. Buka <b>🛒 Toko</b> untuk upgrade & beli 💣 bom / 🌪️ tornado / ☢️ nuklir.<br>
       • <b>🌪️ Tornado</b> (harus dibeli dulu!): badai pengisap yang menyeret & mencabik musuh!<br>
-      • <b>🌧️ Hujan</b>: musuh tak bisa lihat kita → berhenti menembak!<br>
-      • <b>🌍 Gempa</b>: pesawat musuh jatuh & tank rusak parah!<br>
-      • <b>🪖 Pasukan</b>: terjunkan tentara kita untuk menyerang musuh!<br>
-      • Jaga <b>🛡️ perisai markas</b>, habiskan <b>markas musuh</b> untuk MENANG!
+      • <b>🌧️ Hujan</b>: musuh tak bisa lihat kita. <b>🌍 Gempa</b>: pesawat jatuh & tank rusak. <b>🪖 Pasukan</b>: kerahkan tentara!<br>
+      • Hancurkan <b>markas musuh 🏴</b> untuk bonus besar — markas baru yang lebih kuat akan muncul!<br>
+      • Jaga <b>🛡️ perisai markas</b>! Kalau habis = GAME OVER. Kejar <b>rekor gelombang</b> tertinggi! 🏆
     </div>
   </div>
 </div>
@@ -396,7 +406,7 @@ function flagTexture(spec, code){
 
 // ---- Game state ----
 const G = {
-  coins: 0, wave: 1, kills: 0,
+  coins: 0, wave: 1, kills: 0, stage: 1,
   shield: 100, shieldMax: 100,
   enemyBase: 100, enemyBaseMax: 100,
   bombs: 1, nukes: 0, tornadoes: 0,
@@ -646,17 +656,34 @@ function buildBase(){
   scene.add(baseGroup);
 }
 
-// ---- Enemy base far away ----
+// ---- Enemy base far away: a dark fortress with a glowing core ----
 const enemyBaseGroup = new THREE.Group();
+let enemyCore=null;
 (function buildEnemyBase(){
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(9,16,12,0,Math.PI*2,0,Math.PI/2), new THREE.MeshStandardMaterial({color:0x8a3030, flatShading:true}));
-  dome.position.y=0; enemyBaseGroup.add(dome);
-  for(let i=0;i<3;i++){
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.6,10+i*2,8), new THREE.MeshStandardMaterial({color:0x6b2222}));
-    t.position.set((i-1)*8, 5+i, -2); enemyBaseGroup.add(t);
+  const stone = new THREE.MeshStandardMaterial({color:0x2a2330, roughness:.95, flatShading:true});
+  const stoneDk = new THREE.MeshStandardMaterial({color:0x1c1822, roughness:1, flatShading:true});
+  // keep / main hall
+  const keep = new THREE.Mesh(new THREE.CylinderGeometry(8,10,9,10), stone); keep.position.y=4.5; keep.castShadow=true; enemyBaseGroup.add(keep);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(8,18,12,0,Math.PI*2,0,Math.PI/2), stone); dome.position.y=9; enemyBaseGroup.add(dome);
+  // battlement ring
+  for(let i=0;i<12;i++){ const a=i/12*Math.PI*2; const m=new THREE.Mesh(new THREE.BoxGeometry(1.6,2,1.6), stoneDk); m.position.set(Math.cos(a)*10,9.5,Math.sin(a)*10); enemyBaseGroup.add(m); }
+  // glowing red reactor core on top
+  enemyCore = new THREE.Mesh(new THREE.IcosahedronGeometry(2.4,0), new THREE.MeshStandardMaterial({color:0xff3b30, emissive:0xff1a00, emissiveIntensity:1.4, roughness:.3}));
+  enemyCore.position.y=13; enemyBaseGroup.add(enemyCore);
+  const coreLight = new THREE.PointLight(0xff3322, 4, 60); coreLight.position.y=13; enemyBaseGroup.add(coreLight);
+  // corner towers with red lamps
+  for(let i=0;i<4;i++){
+    const a=Math.PI/4 + i*Math.PI/2;
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.0,16,8), stone);
+    t.position.set(Math.cos(a)*12, 8, Math.sin(a)*12); t.castShadow=true; enemyBaseGroup.add(t);
+    const roof=new THREE.Mesh(new THREE.ConeGeometry(2.2,3,8), stoneDk); roof.position.set(Math.cos(a)*12,17.5,Math.sin(a)*12); enemyBaseGroup.add(roof);
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,8), new THREE.MeshStandardMaterial({color:0xff5533, emissive:0xff2200, emissiveIntensity:2}));
+    lamp.position.set(Math.cos(a)*12,16,Math.sin(a)*12); enemyBaseGroup.add(lamp);
   }
-  const f = new THREE.Mesh(new THREE.PlaneGeometry(4,2.4), new THREE.MeshStandardMaterial({color:0x111111, side:THREE.DoubleSide}));
-  f.position.set(0,12,0); enemyBaseGroup.add(f);
+  // dark banner pole
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,10,6), stoneDk); pole.position.set(0,18,0); enemyBaseGroup.add(pole);
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(4,2.6), new THREE.MeshStandardMaterial({color:0x140a10, side:THREE.DoubleSide}));
+  banner.position.set(2.2,21,0); enemyBaseGroup.add(banner);
   enemyBaseGroup.position.set(0,1,-120);
 })();
 scene.add(enemyBaseGroup);
@@ -741,6 +768,33 @@ function makeSoldier(bodyColor, helmetColor){
   g.scale.set(1.4,1.4,1.4);
   return g;
 }
+// Mega boss — a hulking armored war machine with twin cannons & a glowing core
+function makeBoss(){
+  const g = new THREE.Group();
+  const armor = new THREE.MeshStandardMaterial({color:0x3a2230, metalness:.55, roughness:.45, flatShading:true});
+  const trim  = new THREE.MeshStandardMaterial({color:0x6b2222, metalness:.5, roughness:.4});
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(8,3.4,9), armor); hull.position.y=2.6; hull.castShadow=true; g.add(hull);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(6.4,1.4,6.4), trim); deck.position.y=4.6; g.add(deck);
+  // glowing red reactor core
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4,0), new THREE.MeshStandardMaterial({color:0xff3b30, emissive:0xff2200, emissiveIntensity:1.6, roughness:.3}));
+  core.position.y=6.0; g.add(core); g.userData.core=core;
+  const coreLight=new THREE.PointLight(0xff3322, 3, 26); coreLight.position.y=6.0; g.add(coreLight);
+  // twin cannons
+  [-2.2,2.2].forEach(sx=>{
+    const turret=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,1.2,10), trim); turret.position.set(sx,5.3,1.6); g.add(turret);
+    const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.4,5,10), new THREE.MeshStandardMaterial({color:0x14141a, metalness:.6}));
+    bar.rotation.x=Math.PI/2; bar.position.set(sx,5.3,4.4); g.add(bar);
+  });
+  // treads
+  [-4.4,4.4].forEach(sx=>{
+    const tr=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.0,9.4), new THREE.MeshStandardMaterial({color:0x16161c, roughness:.9}));
+    tr.position.set(sx,1.0,0); tr.castShadow=true; g.add(tr);
+    for(let i=0;i<5;i++){ const w=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,0.7,12), new THREE.MeshStandardMaterial({color:0x0a0a0e})); w.rotation.z=Math.PI/2; w.position.set(sx,1.0,-3.6+i*1.8); g.add(w);}
+  });
+  // menacing spikes
+  for(let i=0;i<6;i++){ const sp=new THREE.Mesh(new THREE.ConeGeometry(0.4,1.4,6), new THREE.MeshStandardMaterial({color:0x9a9a9a, metalness:.7})); sp.position.set(-3.3+i*1.3,4.4,-3.4); g.add(sp); }
+  return g;
+}
 
 function makeHpBar(){
   const g=new THREE.Group();
@@ -754,23 +808,27 @@ function makeHpBar(){
 }
 
 function spawnEnemy(type){
-  let mesh, hp, speed, reward, scale;
-  const lvlBoost = 1 + (G.wave-1)*0.18;
-  if(type==='tank'){ mesh=makeTank(); hp=55*lvlBoost; speed=2.2; reward=10; }
-  else if(type==='jet'){ mesh=makeJet(); hp=38*lvlBoost; speed=7.0; reward=14; }
-  else if(type==='soldier'){ mesh=makeSoldier(0x8a3b2f, 0x5a2a20); hp=24*lvlBoost; speed=3.0; reward=8; }
-  else { mesh=makeMissile(); hp=22*lvlBoost; speed=9.0; reward=18; }
+  let mesh, hp, speed, reward, baseHit;
+  const lvlBoost = 1 + (G.wave-1)*0.18;                 // makin tinggi gelombang, makin tebal
+  const spdBoost = 1 + Math.min(0.8, (G.wave-1)*0.025); // sedikit lebih cepat tiap gelombang
+  if(type==='tank'){ mesh=makeTank(); hp=55*lvlBoost; speed=2.2; reward=10; baseHit=5; }
+  else if(type==='jet'){ mesh=makeJet(); hp=38*lvlBoost; speed=7.0; reward=14; baseHit=5; }
+  else if(type==='soldier'){ mesh=makeSoldier(0x8a3b2f, 0x5a2a20); hp=24*lvlBoost; speed=3.0; reward=8; baseHit=3; }
+  else if(type==='boss'){ mesh=makeBoss(); hp=(360+G.wave*40)*lvlBoost; speed=1.5; reward=120+G.stage*30; baseHit=55; }
+  else { mesh=makeMissile(); hp=22*lvlBoost; speed=9.0; reward=18; baseHit=7; }
+  speed *= spdBoost;
 
   const x = (Math.random()*2-1)*36;
-  const y = (type==='tank'||type==='soldier') ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
-  mesh.position.set(x, y, -100 - Math.random()*15);
+  const y = (type==='tank'||type==='soldier'||type==='boss') ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
+  mesh.position.set(type==='boss'?0:x, y, -100 - Math.random()*15);
   mesh.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
   // health bar above the unit
   const hpbar = makeHpBar();
-  hpbar.group.position.y = type==='tank'?3.6 : type==='soldier'?2.9 : type==='jet'?2.2 : 2.6;
+  hpbar.group.position.y = type==='boss'?7.0 : type==='tank'?3.6 : type==='soldier'?2.9 : type==='jet'?2.2 : 2.6;
+  if(type==='boss') hpbar.group.scale.set(2,2,1);
   mesh.add(hpbar.group);
   scene.add(mesh);
-  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, fireT: 1+Math.random()*2, vy:0, hpbar });
+  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, baseHit, fireT: 1+Math.random()*2, vy:0, hpbar });
 }
 
 // =========================================================
@@ -791,6 +849,23 @@ const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 const aimPoint = new THREE.Vector3();
 const aimPlane = new THREE.Plane(new THREE.Vector3(0,0,1), 95); // far plane z=-95-ish
+
+// ---- Aim assist: arahkan tembakan ke musuh terdekat dari crosshair (membidik jadi mudah) ----
+const AIM_ASSIST_PX = 200; // radius bantuan bidik (px) — makin besar makin gampang
+function findAimTarget(){
+  let best=null, bestD=AIM_ASSIST_PX;
+  for(const e of enemies){
+    if(e.falling) continue;
+    const v=e.mesh.position.clone().project(camera);
+    if(v.z>1) continue; // di belakang kamera
+    const sx=(v.x*0.5+0.5)*innerWidth, sy=(-v.y*0.5+0.5)*innerHeight;
+    const d=Math.hypot(sx-aim.x, sy-aim.y);
+    // beri prioritas musuh besar/boss dengan menambah toleransi
+    const tol = e.type==='boss'?80 : 0;
+    if(d-tol < bestD){ bestD=d-tol; best=e; }
+  }
+  return best;
+}
 
 function updateAimPoint(){
   crossEl.style.left = aim.x+'px';
@@ -813,16 +888,20 @@ function fire(){
   Sound.shoot();
   updateAimPoint();
   const muzzle = new THREE.Vector3(0,3.6, baseGroup.position.z-2.6);
+  // aim assist: kalau ada musuh dekat crosshair, kunci ke sana
+  const lock = findAimTarget();
+  const aimTo = lock ? lock.mesh.position.clone() : aimPoint.clone();
   const n = stats.bullets;
   for(let i=0;i<n;i++){
-    const target = aimPoint.clone();
+    const target = aimTo.clone();
     if(n>1){ target.x += (i-(n-1)/2)*4; }
     const dir = target.sub(muzzle).normalize();
     const b = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5,8,8),
-      new THREE.MeshBasicMaterial({color:0xffe14d})
+      new THREE.CapsuleGeometry(0.22,1.7,4,8),
+      new THREE.MeshBasicMaterial({color:0xfff1a0})
     );
     b.position.copy(muzzle);
+    b.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
     const glow = new THREE.PointLight(0xffd54a, 2, 10); b.add(glow);
     scene.add(b);
     bullets.push({ mesh:b, vel:dir.multiplyScalar(160), dmg:stats.gunDamage, life:2.2 });
@@ -840,16 +919,31 @@ function muzzleFlash(pos){
 }
 
 function explosion(pos, size=1, color=0xff7a1a){
+  // fire chunks
   for(let i=0;i<14*size;i++){
     const p = new THREE.Mesh(new THREE.SphereGeometry(0.3+Math.random()*0.5*size,6,6),
-      new THREE.MeshBasicMaterial({color: Math.random()<0.5?color:0xffd54a}));
+      new THREE.MeshBasicMaterial({color: Math.random()<0.5?color:0xffd54a, transparent:true}));
     p.position.copy(pos);
     const v = new THREE.Vector3((Math.random()*2-1),(Math.random()*2-1),(Math.random()*2-1)).multiplyScalar(8*size);
     fx.push({ mesh:p, vel:v, life:0.5+Math.random()*0.4, fade:true });
     scene.add(p);
   }
-  const ring = new THREE.PointLight(color, 4*size, 30*size); ring.position.copy(pos); scene.add(ring);
-  fx.push({ mesh:ring, vel:new THREE.Vector3(), life:0.3, fade:false, isLight:true });
+  // rising smoke puffs
+  for(let i=0;i<5*size;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(0.6+Math.random()*0.7*size,7,7),
+      new THREE.MeshBasicMaterial({color:0x3a3a3a, transparent:true, opacity:0.5}));
+    s.position.copy(pos).add(new THREE.Vector3((Math.random()*2-1)*size,Math.random()*size,(Math.random()*2-1)*size));
+    fx.push({ mesh:s, vel:new THREE.Vector3((Math.random()*2-1)*2,3+Math.random()*2,(Math.random()*2-1)*2), life:0.9+Math.random()*0.6, fade:true, grow:1.5, smoke:true, alpha:0.5 });
+    scene.add(s);
+  }
+  // expanding shockwave ring (billboarded toward camera)
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.4*size,0.75*size,28), new THREE.MeshBasicMaterial({color:0xffe7a8, transparent:true, opacity:0.85, side:THREE.DoubleSide}));
+  ring.position.copy(pos); ring.lookAt(camera.position);
+  fx.push({ mesh:ring, vel:new THREE.Vector3(), life:0.42, fade:true, grow:6 });
+  scene.add(ring);
+  // flash light
+  const light = new THREE.PointLight(color, 4*size, 30*size); light.position.copy(pos); scene.add(light);
+  fx.push({ mesh:light, vel:new THREE.Vector3(), life:0.3, fade:false, isLight:true });
 }
 
 // =========================================================
@@ -1010,7 +1104,8 @@ function damageEnemy(i, dmg){
     enemies.splice(i,1);
     G.kills++;
     addCoins(e.reward);
-    damageEnemyBase(4); // every kill chips enemy morale/base
+    if(e.type==='boss'){ explosion(p.clone(),3.0,0xff5722); flashScreen(); toast('💀 BOSS TUMBANG! +'+e.reward+' 🪙'); }
+    damageEnemyBase(e.baseHit||4); // tiap musuh kalah menggerus markas musuh
   }
 }
 
@@ -1031,8 +1126,25 @@ function popText(world, text, color){
 
 function damageEnemyBase(n){
   G.enemyBase = Math.max(0, G.enemyBase-n);
+  if(G.enemyBase<=0 && G.running) breakEnemyBase();
   updateHUD();
-  if(G.enemyBase<=0 && G.running) endGame(true);
+}
+
+// ENDLESS mode: menghancurkan markas musuh BUKAN akhir game — markas berikutnya
+// muncul lebih kuat, dapat bonus koin & boss penjaga. Game hanya berakhir saat PEMAIN kalah.
+function breakEnemyBase(){
+  G.stage++;
+  const bonus = 60 + G.stage*40;
+  addCoins(bonus);
+  Sound.win();
+  flashScreen();
+  explosion(enemyBaseGroup.position.clone().setY(9), 7, 0xffd54a);
+  setTimeout(()=>explosion(enemyBaseGroup.position.clone().setY(16), 5, 0xff9d2a),150);
+  toast('🏴 MARKAS MUSUH #'+(G.stage-1)+' HANCUR! +'+bonus+' 🪙');
+  // markas baru lebih tebal
+  G.enemyBaseMax = Math.round(G.enemyBaseMax*1.5 + 80);
+  G.enemyBase = G.enemyBaseMax;
+  bossPending = true; // boss penjaga datang
 }
 
 function damageShield(n){
@@ -1040,7 +1152,7 @@ function damageShield(n){
   updateHUD();
   Sound.hurt();
   hurtFlash();
-  if(G.shield<=0 && G.running) endGame(false);
+  if(G.shield<=0 && G.running) endGame();
 }
 
 // =========================================================
@@ -1073,14 +1185,15 @@ function hurtFlash(){ const f=el('flash'); f.style.background='#ff2a2a'; f.style
 // =========================================================
 //  Waves
 // =========================================================
-let spawnTimer=0, toSpawn=0, waveActive=false, waveBreak=0;
+let spawnTimer=0, toSpawn=0, waveActive=false, waveBreak=0, bossPending=false;
 function startWave(){
   waveActive=true;
   toSpawn = 4 + G.wave*2;
   spawnTimer=0;
   el('waveNum').textContent = G.wave;
   Sound.wave();
-  toast('🌊 Gelombang '+G.wave);
+  if(G.wave%5===0){ bossPending=true; toast('⚠️ GELOMBANG '+G.wave+' — BOSS DATANG!'); }
+  else toast('🌊 Gelombang '+G.wave);
 }
 function pickType(){
   const r=Math.random();
@@ -1130,9 +1243,11 @@ function animate(){
 
   if(flagMesh) flagMesh.rotation.y = Math.sin(performance.now()*0.002)*0.3;
   enemyBaseGroup.rotation.y += dt*0.1;
+  if(enemyCore){ const pl=1.3+Math.sin(performance.now()*0.004)*0.5; enemyCore.material.emissiveIntensity=pl; enemyCore.rotation.y+=dt*1.5; enemyCore.rotation.x+=dt*0.8; }
 
   if(G.running){
     updateAimPoint();
+    crossEl.classList.toggle('lock', !!findAimTarget()); // umpan balik kunci sasaran
 
     // weather + cooldown timers
     if(cd.rain>0) cd.rain=Math.max(0,cd.rain-dt);
@@ -1152,7 +1267,11 @@ function animate(){
     // spawning
     if(waveActive && toSpawn>0){
       spawnTimer-=dt;
-      if(spawnTimer<=0){ spawnEnemy(pickType()); toSpawn--; spawnTimer = Math.max(0.4, 1.4 - G.wave*0.05); }
+      if(spawnTimer<=0){
+        if(bossPending){ spawnEnemy('boss'); bossPending=false; spawnTimer=1.6; }
+        else { spawnEnemy(pickType()); spawnTimer = Math.max(0.35, 1.4 - G.wave*0.05); }
+        toSpawn--;
+      }
     }
     if(waveActive && toSpawn<=0 && enemies.length===0){
       waveActive=false; G.wave++; addCoins(15); waveBreak=1.2; // jeda antar gelombang
@@ -1173,7 +1292,7 @@ function animate(){
       let hit=false;
       for(let j=enemies.length-1;j>=0;j--){
         const e=enemies[j];
-        const r = e.type==='tank'?3.2:3.0;
+        const r = e.type==='boss'?6.5 : e.type==='tank'?3.2:3.0;
         if(b.mesh.position.distanceTo(e.mesh.position)<r){
           damageEnemy(j, b.dmg); hit=true; break;
         }
@@ -1186,6 +1305,7 @@ function animate(){
     const onGround = t => t==='tank'||t==='soldier';
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i]; const m=e.mesh;
+      if(e.type==='boss' && m.userData.core){ m.userData.core.rotation.y+=dt*2.5; m.userData.core.rotation.x+=dt*1.2; }
 
       // falling (knocked down by earthquake)
       if(e.falling){
@@ -1194,7 +1314,7 @@ function animate(){
         if(m.position.y<=0){
           explosion(m.position.clone(),1.4); Sound.explosion();
           scene.remove(m); enemies.splice(i,1);
-          G.kills++; addCoins(e.reward); damageEnemyBase(4);
+          G.kills++; addCoins(e.reward); damageEnemyBase(e.baseHit||4);
         }
         continue;
       }
@@ -1216,8 +1336,8 @@ function animate(){
 
       // reached base -> damage shield
       if(d < 14){
-        damageShield(e.type==='missile'?22: e.type==='jet'?12: e.type==='soldier'?8:14);
-        explosion(m.position.clone(),1.2,0xff3030);
+        damageShield(e.type==='boss'?40: e.type==='missile'?22: e.type==='jet'?12: e.type==='soldier'?8:14);
+        explosion(m.position.clone(), e.type==='boss'?2.2:1.2, 0xff3030);
         scene.remove(m); enemies.splice(i,1); continue;
       }
       // shoot at base — TIDAK saat hujan (musuh tak bisa lihat kita)
@@ -1297,9 +1417,10 @@ function animate(){
   for(let i=fx.length-1;i>=0;i--){
     const p=fx[i];
     p.mesh.position.addScaledVector(p.vel, dt);
-    p.vel.multiplyScalar(0.92);
+    p.vel.multiplyScalar(p.smoke?0.97:0.92);
+    if(p.grow) p.mesh.scale.multiplyScalar(1+p.grow*dt);
     p.life-=dt;
-    if(p.fade && p.mesh.material) p.mesh.material.opacity = Math.max(0,p.life*2), p.mesh.material.transparent=true;
+    if(p.fade && p.mesh.material){ p.mesh.material.transparent=true; p.mesh.material.opacity = Math.min(1,p.life*2)*(p.alpha??1); }
     if(p.isLight) p.mesh.intensity = Math.max(0,p.life*10);
     if(p.life<=0){ scene.remove(p.mesh); fx.splice(i,1); }
   }
@@ -1470,11 +1591,13 @@ function startGame(){
   if(G.flagCode){ el('flagDot').style.backgroundImage=`url(${FLAG_CDN(G.flagCode)})`; }
   else { el('flagDot').style.backgroundImage='none'; el('flagDot').style.background='#'+G.flag.toString(16).padStart(6,'0'); }
   G.shield = stats.shieldMax; G.shieldMax = stats.shieldMax;
+  // reset endless state: gelombang, markas musuh, tahap
+  G.wave=1; G.kills=0; G.stage=1; G.enemyBaseMax=100; G.enemyBase=100;
   // reset cuaca, cooldown, pasukan, tornado, kamera
   weather.rain=0; weather.quake=0; weather.shake=0;
   cd.rain=0; cd.quake=0; cd.ally=0;
   camPan.x=camPan.y=camPan.tx=camPan.ty=0;
-  waveBreak=0;
+  waveBreak=0; bossPending=false;
   stopRain();
   allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
   allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
@@ -1486,8 +1609,9 @@ function startGame(){
   startWave();
 }
 
-function endGame(win){
-  G.running=false; waveActive=false; waveBreak=0;
+function endGame(){
+  // ENDLESS: game hanya berakhir saat perisai markas pemain habis
+  G.running=false; waveActive=false; waveBreak=0; bossPending=false;
   // clear field
   enemies.forEach(e=>scene.remove(e.mesh)); enemies.length=0;
   eBullets.forEach(b=>scene.remove(b.mesh)); eBullets.length=0;
@@ -1495,19 +1619,17 @@ function endGame(win){
   allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
   tornadoes.forEach(t=>scene.remove(t.group)); tornadoes.length=0;
   stopRain();
-  win ? Sound.win() : Sound.lose();
-  // update & save high score
+  Sound.lose();
+  // update & save high score (berdasarkan gelombang yang dicapai)
   let isRecord=false;
   if(G.wave>BEST.wave || (G.wave===BEST.wave && G.coins>BEST.coins)){
     BEST = {wave:G.wave, coins:G.coins, kills:G.kills}; saveBest(BEST); isRecord=true;
   }
   el('endBest').innerHTML = isRecord
-    ? '🏆 REKOR BARU! Hebat! 🎊'
+    ? '🏆 REKOR BARU! Luar biasa! 🎊'
     : `🏆 Rekor: Gelombang ${BEST.wave} • 🪙 ${BEST.coins}`;
-  el('endTitle').textContent = win? '🎉 MENANG!' : '💥 KALAH!';
-  el('endMsg').textContent = win
-    ? `${G.country} menghancurkan markas musuh! Kamu juara! 🏆`
-    : `Markas ${G.country} jatuh... coba lagi ya! 💪`;
+  el('endTitle').textContent = '☠️ GAME OVER';
+  el('endMsg').textContent = `Markas ${G.country} berhasil ditembus. Kamu bertahan sampai Gelombang ${G.wave} & menghancurkan ${G.stage-1} markas musuh! 💪`;
   el('endWave').textContent = G.wave;
   el('endKills').textContent = G.kills;
   el('endCoins').textContent = G.coins;
