@@ -796,6 +796,76 @@ function makeBoss(){
   return g;
 }
 
+// MEGA BOSS: giant Gundam-style mecha (humanoid). Forward = +z (faces the player base).
+function makeGundam(){
+  const g = new THREE.Group();
+  const white = new THREE.MeshStandardMaterial({color:0xeef1f6, metalness:.35, roughness:.45, flatShading:true});
+  const blue  = new THREE.MeshStandardMaterial({color:0x274bb5, metalness:.4, roughness:.45, flatShading:true});
+  const red   = new THREE.MeshStandardMaterial({color:0xc0392b, metalness:.4, roughness:.45, flatShading:true});
+  const yellow= new THREE.MeshStandardMaterial({color:0xf3c016, metalness:.5, roughness:.4});
+  const joint = new THREE.MeshStandardMaterial({color:0x2a2e36, metalness:.6, roughness:.5});
+  const eyeMat= new THREE.MeshStandardMaterial({color:0x39ff9b, emissive:0x22ff88, emissiveIntensity:2.2});
+  const box=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+
+  // ---- legs (pivot at hip so they can swing while walking) ----
+  function leg(side){
+    const L=new THREE.Group(); L.position.set(side*1.7, 7.0, 0);
+    const thigh=box(1.7,3.2,1.7,white); thigh.position.y=-1.6; L.add(thigh);
+    const knee =box(1.3,0.8,1.3,joint); knee.position.y=-3.3; L.add(knee);
+    const shin =box(1.6,3.4,1.6,blue);  shin.position.y=-5.0; L.add(shin);
+    const foot =box(2.0,0.9,2.9,white); foot.position.set(0,-6.7,0.4); L.add(foot);
+    const knee2=box(1.7,1.0,0.4,yellow);knee2.position.set(0,-3.3,0.9); L.add(knee2);
+    return L;
+  }
+  const legL=leg(-1), legR=leg(1); g.add(legL,legR);
+  g.userData.legL=legL; g.userData.legR=legR;
+
+  // ---- pelvis + torso ----
+  const pelvis=box(3.6,1.6,2.2,blue); pelvis.position.y=7.2; g.add(pelvis);
+  const skirtF=box(1.4,2.0,0.5,red); skirtF.position.set(0,6.6,1.2); g.add(skirtF);
+  const torso=box(4.6,3.6,2.7,white); torso.position.y=9.8; torso.castShadow=true; g.add(torso);
+  // chest vents (classic red) + cockpit core
+  const ventL=box(1.1,1.6,0.4,red); ventL.position.set(-1.2,10.2,1.4); g.add(ventL);
+  const ventR=ventL.clone(); ventR.position.x=1.2; g.add(ventR);
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(0.7,0), new THREE.MeshStandardMaterial({color:0xffd54a, emissive:0xffaa00, emissiveIntensity:1.6, roughness:.3}));
+  core.position.set(0,9.9,1.45); g.add(core); g.userData.core=core;
+  const coreLight=new THREE.PointLight(0xffc24a,2.2,30); coreLight.position.set(0,10,3); g.add(coreLight);
+
+  // ---- head with V-fin + glowing eyes ----
+  const neck=box(0.9,0.7,0.9,joint); neck.position.y=11.9; g.add(neck);
+  const head=box(1.7,1.5,1.7,white); head.position.y=12.7; g.add(head);
+  const eye=box(1.4,0.4,0.2,eyeMat); eye.position.set(0,12.7,0.9); g.add(eye);
+  const finC=box(0.4,1.0,0.3,red); finC.position.set(0,13.7,0.4); g.add(finC);
+  [-1,1].forEach(s=>{ const fin=box(1.3,0.28,0.28,yellow); fin.position.set(s*1.0,13.4,0.3); fin.rotation.z=s*0.5; g.add(fin); });
+
+  // ---- shoulders + arms ----
+  function arm(side){
+    const A=new THREE.Group(); A.position.set(side*3.2,10.6,0);
+    const shoulder=box(1.8,1.8,2.0,red); A.add(shoulder);
+    const upper=box(1.3,2.6,1.3,white); upper.position.y=-2.0; A.add(upper);
+    const elbow=box(1.1,0.7,1.1,joint); elbow.position.y=-3.4; A.add(elbow);
+    const fore =box(1.2,2.6,1.2,blue);  fore.position.y=-4.7; A.add(fore);
+    return A;
+  }
+  const armL=arm(-1), armR=arm(1); g.add(armL,armR);
+  // beam rifle in right hand, pointing forward (+z)
+  const rifle=box(0.7,0.7,5.2,joint); rifle.position.set(3.2,5.9,2.0); g.add(rifle);
+  const scope=box(0.5,0.9,0.9,red); scope.position.set(3.2,6.6,1.2); g.add(scope);
+  const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.55,0.6,10), yellow); muzzle.rotation.x=Math.PI/2; muzzle.position.set(3.2,5.9,4.7); g.add(muzzle);
+  // shield on left arm
+  const shield=box(0.5,4.4,2.8,yellow); shield.position.set(-4.4,8.2,1.0); g.add(shield);
+
+  // ---- backpack + thrusters + beam-saber handles ----
+  const pack=box(3.0,3.0,1.2,joint); pack.position.set(0,10.2,-1.8); g.add(pack);
+  [-0.9,0.9].forEach(s=>{
+    const th=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.7,1.8,10), white); th.position.set(s,8.4,-2.2); th.rotation.x=0.4; g.add(th);
+    const sab=box(0.3,2.2,0.3,blue); sab.position.set(s*1.2,12.2,-2.2); g.add(sab);
+  });
+
+  g.scale.setScalar(1.25); // imposing
+  return g;
+}
+
 function makeHpBar(){
   const g=new THREE.Group();
   const bg=new THREE.Mesh(new THREE.PlaneGeometry(3,0.45), new THREE.MeshBasicMaterial({color:0x300000}));
@@ -814,21 +884,26 @@ function spawnEnemy(type){
   if(type==='tank'){ mesh=makeTank(); hp=55*lvlBoost; speed=2.2; reward=10; baseHit=5; }
   else if(type==='jet'){ mesh=makeJet(); hp=38*lvlBoost; speed=7.0; reward=14; baseHit=5; }
   else if(type==='soldier'){ mesh=makeSoldier(0x8a3b2f, 0x5a2a20); hp=24*lvlBoost; speed=3.0; reward=8; baseHit=3; }
-  else if(type==='boss'){ mesh=makeBoss(); hp=(360+G.wave*40)*lvlBoost; speed=1.5; reward=120+G.stage*30; baseHit=55; }
+  else if(type==='boss'){ mesh=makeBoss(); hp=(160+G.wave*30)*lvlBoost; speed=1.6; reward=120+G.stage*30; baseHit=45; }
+  else if(type==='gundam'){ mesh=makeGundam(); hp=(230+G.wave*42)*lvlBoost; speed=1.2; reward=180+G.stage*40; baseHit=55; }
   else { mesh=makeMissile(); hp=22*lvlBoost; speed=9.0; reward=18; baseHit=7; }
   speed *= spdBoost;
 
+  const big = (type==='boss'||type==='gundam');
   const x = (Math.random()*2-1)*36;
-  const y = (type==='tank'||type==='soldier'||type==='boss') ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
-  mesh.position.set(type==='boss'?0:x, y, -100 - Math.random()*15);
+  const y = (type==='tank'||type==='soldier'||big) ? 0 : (type==='jet'? 12+Math.random()*8 : 6+Math.random()*6);
+  mesh.position.set(big?0:x, y, -100 - Math.random()*15);
   mesh.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
   // health bar above the unit
   const hpbar = makeHpBar();
-  hpbar.group.position.y = type==='boss'?7.0 : type==='tank'?3.6 : type==='soldier'?2.9 : type==='jet'?2.2 : 2.6;
+  hpbar.group.position.y = type==='gundam'?18 : type==='boss'?7.0 : type==='tank'?3.6 : type==='soldier'?2.9 : type==='jet'?2.2 : 2.6;
   if(type==='boss') hpbar.group.scale.set(2,2,1);
+  if(type==='gundam') hpbar.group.scale.set(3,2.4,1);
   mesh.add(hpbar.group);
   scene.add(mesh);
-  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, baseHit, fireT: 1+Math.random()*2, vy:0, hpbar });
+  // cy = tinggi "pusat badan" untuk membidik & deteksi kena (model besar punya badan di atas)
+  const cy = type==='gundam'?11 : type==='boss'?4 : (type==='tank'||type==='soldier')?1.5 : 0;
+  enemies.push({ mesh, type, hp, hpMax:hp, speed, reward, baseHit, cy, fireT: 1+Math.random()*2, vy:0, hpbar });
 }
 
 // =========================================================
@@ -856,7 +931,7 @@ function findAimTarget(){
   let best=null, bestD=AIM_ASSIST_PX;
   for(const e of enemies){
     if(e.falling) continue;
-    const v=e.mesh.position.clone().project(camera);
+    const v=e.mesh.position.clone(); v.y += (e.cy||0); v.project(camera);
     if(v.z>1) continue; // di belakang kamera
     const sx=(v.x*0.5+0.5)*innerWidth, sy=(-v.y*0.5+0.5)*innerHeight;
     const d=Math.hypot(sx-aim.x, sy-aim.y);
@@ -890,7 +965,7 @@ function fire(){
   const muzzle = new THREE.Vector3(0,3.6, baseGroup.position.z-2.6);
   // aim assist: kalau ada musuh dekat crosshair, kunci ke sana
   const lock = findAimTarget();
-  const aimTo = lock ? lock.mesh.position.clone() : aimPoint.clone();
+  const aimTo = lock ? lock.mesh.position.clone().setY(lock.mesh.position.y + (lock.cy||0)) : aimPoint.clone();
   const n = stats.bullets;
   for(let i=0;i<n;i++){
     const target = aimTo.clone();
@@ -1096,7 +1171,7 @@ function damageEnemy(i, dmg){
   const e = enemies[i]; if(!e) return;
   e.hp -= dmg;
   if(e.hp<=0){
-    const p=e.mesh.position.clone();
+    const p=e.mesh.position.clone(); p.y += (e.cy||0);
     explosion(p.clone(), e.type==='tank'?1.6:1.2);
     Sound.explosion();
     popText(p.clone().setY(p.y+3), '+'+e.reward+' 🪙', '#ffd54a');
@@ -1104,7 +1179,12 @@ function damageEnemy(i, dmg){
     enemies.splice(i,1);
     G.kills++;
     addCoins(e.reward);
-    if(e.type==='boss'){ explosion(p.clone(),3.0,0xff5722); flashScreen(); toast('💀 BOSS TUMBANG! +'+e.reward+' 🪙'); }
+    if(e.type==='boss'||e.type==='gundam'){
+      explosion(p.clone(), e.type==='gundam'?4.5:3.0, 0xff5722);
+      setTimeout(()=>explosion(p.clone().setY(p.y+4), 3, 0xffd54a), 120);
+      flashScreen();
+      toast(e.type==='gundam' ? '🤖 GUNDAM HANCUR! +'+e.reward+' 🪙' : '💀 BOSS TUMBANG! +'+e.reward+' 🪙');
+    }
     damageEnemyBase(e.baseHit||4); // tiap musuh kalah menggerus markas musuh
   }
 }
@@ -1192,9 +1272,14 @@ function startWave(){
   spawnTimer=0;
   el('waveNum').textContent = G.wave;
   Sound.wave();
-  if(G.wave%5===0){ bossPending=true; toast('⚠️ GELOMBANG '+G.wave+' — BOSS DATANG!'); }
-  else toast('🌊 Gelombang '+G.wave);
+  // boss tiap 3 gelombang, mulai gelombang 3; Gundam & boss-tank bergantian (Gundam lebih dulu)
+  if(G.wave%3===0){
+    bossPending=true;
+    toast(bossKind()==='gundam' ? '🤖 GUNDAM RAKSASA MENYERANG!!' : '⚠️ GELOMBANG '+G.wave+' — BOSS DATANG!');
+  } else toast('🌊 Gelombang '+G.wave);
 }
+// pilih jenis boss untuk gelombang saat ini (gundam di gel. 3, 9, 15…; boss-tank di gel. 6, 12, 18…)
+function bossKind(){ return (Math.floor(G.wave/3)%2===1) ? 'gundam' : 'boss'; }
 function pickType(){
   const r=Math.random();
   if(G.wave>=3 && r<0.18) return 'missile';
@@ -1268,7 +1353,7 @@ function animate(){
     if(waveActive && toSpawn>0){
       spawnTimer-=dt;
       if(spawnTimer<=0){
-        if(bossPending){ spawnEnemy('boss'); bossPending=false; spawnTimer=1.6; }
+        if(bossPending){ spawnEnemy(bossKind()); bossPending=false; spawnTimer=1.6; }
         else { spawnEnemy(pickType()); spawnTimer = Math.max(0.35, 1.4 - G.wave*0.05); }
         toSpawn--;
       }
@@ -1292,8 +1377,9 @@ function animate(){
       let hit=false;
       for(let j=enemies.length-1;j>=0;j--){
         const e=enemies[j];
-        const r = e.type==='boss'?6.5 : e.type==='tank'?3.2:3.0;
-        if(b.mesh.position.distanceTo(e.mesh.position)<r){
+        const r = e.type==='gundam'?7 : e.type==='boss'?6.5 : e.type==='tank'?3.4:3.2;
+        tmpV2.copy(e.mesh.position); tmpV2.y += (e.cy||0); // arah ke pusat badan
+        if(b.mesh.position.distanceTo(tmpV2)<r){
           damageEnemy(j, b.dmg); hit=true; break;
         }
       }
@@ -1306,6 +1392,12 @@ function animate(){
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i]; const m=e.mesh;
       if(e.type==='boss' && m.userData.core){ m.userData.core.rotation.y+=dt*2.5; m.userData.core.rotation.x+=dt*1.2; }
+      if(e.type==='gundam'){
+        const tt=performance.now()*0.006;
+        if(m.userData.legL) m.userData.legL.rotation.x=Math.sin(tt)*0.42;
+        if(m.userData.legR) m.userData.legR.rotation.x=-Math.sin(tt)*0.42;
+        if(m.userData.core) m.userData.core.material.emissiveIntensity=1.2+Math.sin(tt*2)*0.7;
+      }
 
       // falling (knocked down by earthquake)
       if(e.falling){
@@ -1336,8 +1428,8 @@ function animate(){
 
       // reached base -> damage shield
       if(d < 14){
-        damageShield(e.type==='boss'?40: e.type==='missile'?22: e.type==='jet'?12: e.type==='soldier'?8:14);
-        explosion(m.position.clone(), e.type==='boss'?2.2:1.2, 0xff3030);
+        damageShield(e.type==='gundam'?55: e.type==='boss'?40: e.type==='missile'?22: e.type==='jet'?12: e.type==='soldier'?8:14);
+        explosion(m.position.clone(), (e.type==='gundam'||e.type==='boss')?2.4:1.2, 0xff3030);
         scene.remove(m); enemies.splice(i,1); continue;
       }
       // shoot at base — TIDAK saat hujan (musuh tak bisa lihat kita)
