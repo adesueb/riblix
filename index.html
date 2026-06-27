@@ -53,7 +53,36 @@
   .dockBtn.ally  { background:radial-gradient(circle at 30% 22%,#aadd77,#33691e); }
   .dockBtn.bomb  { background:radial-gradient(circle at 30% 22%,#ffd877,#f9a825); }
   .dockBtn.nuke  { background:radial-gradient(circle at 30% 22%,#caa0ff,#7b1fa2); }
+  .dockBtn.tornado { background:radial-gradient(circle at 30% 22%,#bfe6ff,#2e6da4); }
   .dockBtn .cd { position:absolute; inset:0; background:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; }
+
+  /* ====== D-pad (explore map) ====== */
+  #dpad { position:fixed; left:10px; bottom:78px; z-index:12; width:138px; height:138px; pointer-events:none; }
+  .padBtn { pointer-events:auto; position:absolute; width:44px; height:44px; border-radius:12px; border:2px solid rgba(255,255,255,.35);
+            background:radial-gradient(circle at 30% 25%, rgba(255,255,255,.22), rgba(0,0,0,.45)); color:#cfeaff; font-size:20px; line-height:1;
+            display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.5); text-shadow:0 1px 2px #000; transition:transform .07s, background .1s; }
+  .padBtn:active { transform:scale(.88); background:radial-gradient(circle at 30% 25%, rgba(126,240,255,.55), rgba(0,40,80,.6)); }
+  .padBtn.up    { left:47px; top:0; }
+  .padBtn.down  { left:47px; bottom:0; }
+  .padBtn.left  { left:0; top:47px; }
+  .padBtn.right { right:0; top:47px; }
+  .padHint { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:9px; opacity:.65; text-align:center; width:54px; line-height:1.1; pointer-events:none; }
+
+  /* ====== Rotate to landscape prompt ====== */
+  #rotate { display:none; position:fixed; inset:0; z-index:200; background:radial-gradient(circle at 50% 40%,#13335f,#06122a 85%);
+            align-items:center; justify-content:center; text-align:center; padding:30px; }
+  #rotate .rotInner { max-width:340px; }
+  #rotate h2 { font-size:24px; margin:14px 0 8px; text-shadow:0 2px 0 #000; }
+  #rotate p { font-size:15px; opacity:.9; line-height:1.5; }
+  #rotate .phone { font-size:64px; display:inline-block; animation:rotatePhone 1.8s ease-in-out infinite; }
+  @keyframes rotatePhone { 0%,40%{ transform:rotate(0); } 70%,100%{ transform:rotate(90deg); } }
+  @media (orientation:portrait) and (max-width:900px) {
+    #rotate { display:flex; }
+  }
+
+  /* flag chip in HUD uses the real flag image */
+  #flagDot { background-size:cover; background-position:center; }
+  .countryTile img { width:46px; height:31px; border-radius:4px; object-fit:cover; box-shadow:0 1px 3px rgba(0,0,0,.5); background:#234; }
 
   /* ====== Overlays ====== */
   .screen { position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; padding:18px;
@@ -108,6 +137,15 @@
 </style>
 </head>
 <body>
+<!-- Rotate prompt (game is designed for landscape / horizontal) -->
+<div id="rotate">
+  <div class="rotInner">
+    <div class="phone">📱</div>
+    <h2>Putar Layar ke Posisi Mendatar</h2>
+    <p>Game ini paling seru dimainkan secara <b>horizontal</b>. Putar HP-mu ya! 🔄</p>
+  </div>
+</div>
+
 <div id="game"></div>
 
 <!-- HUD -->
@@ -141,7 +179,17 @@
   <button class="dockBtn ally" id="allyBtn">🪖<small>Pasukan</small></button>
   <button class="dockBtn bomb" id="bombBtn">💣<small id="bombCount">x0</small></button>
   <button class="dockBtn nuke" id="nukeBtn">☢️<small id="nukeCount">x0</small></button>
+  <button class="dockBtn tornado" id="tornadoBtn">🌪️<small id="tornadoCount">x0</small></button>
   <button class="dockBtn fire" id="fireBtn">🔫<small>TEMBAK</small></button>
+</div>
+
+<!-- D-PAD: explore the map (left/right/up/down) -->
+<div id="dpad">
+  <button class="padBtn up"    data-dir="u">▲</button>
+  <button class="padBtn left"  data-dir="l">◀</button>
+  <button class="padBtn right" data-dir="r">▶</button>
+  <button class="padBtn down"  data-dir="d">▼</button>
+  <span class="padHint">Jelajah Peta</span>
 </div>
 
 <!-- START / CREATE COUNTRY -->
@@ -168,9 +216,11 @@
       <b>Cara main:</b><br>
       • Geser layar untuk <b>membidik</b>.<br>
       • Tekan 🔫 (atau klik / Spasi) untuk <b>menembak</b>.<br>
+      • Pakai <b>tombol panah ◀▲▼▶</b> (atau WASD / panah keyboard) untuk <b>menjelajah peta</b>.<br>
       • Hancurkan <b>tank 🚜, pesawat ✈️, dan rudal 🚀</b> musuh.<br>
       • Tiap musuh kalah = dapat <b>koin 🪙</b>.<br>
-      • Buka <b>🛒 Toko</b> untuk upgrade & beli 💣 bom / ☢️ nuklir.<br>
+      • Buka <b>🛒 Toko</b> untuk upgrade & beli 💣 bom / 🌪️ tornado / ☢️ nuklir.<br>
+      • <b>🌪️ Tornado</b> (harus dibeli dulu!): badai pengisap yang menyeret & mencabik musuh!<br>
       • <b>🌧️ Hujan</b>: musuh tak bisa lihat kita → berhenti menembak!<br>
       • <b>🌍 Gempa</b>: pesawat musuh jatuh & tank rusak parah!<br>
       • <b>🪖 Pasukan</b>: terjunkan tentara kita untuk menyerang musuh!<br>
@@ -259,6 +309,7 @@ const Sound = (function(){
     lose(){ [400,330,250,160].forEach((f,i)=>setTimeout(()=>tone(f,.3,'sawtooth',.22),i*160)); },
     rain(){ noise(1.2,.25,2500); },
     quake(){ noise(1.4,.6,260); tone(45,1.4,'sine',.4,28); },
+    tornado(){ noise(2.0,.45,1400); tone(140,1.6,'sawtooth',.22,520); setTimeout(()=>noise(1.4,.35,1000),200); },
     deploy(){ tone(523,.1,'square',.18); setTimeout(()=>tone(784,.14,'square',.18),100); },
     toggle(){ muted=!muted; return muted; },
     isMuted(){ return muted; },
@@ -287,23 +338,27 @@ const FLAG_COLORS = [
 
 // ---- Real-world countries (flags drawn on canvas so they look right everywhere) ----
 const COUNTRIES = [
-  { name:'Indonesia',    emoji:'🇮🇩', color:0xff3b30, flag:{type:'hstripe', colors:['#e1142d','#ffffff']} },
-  { name:'Malaysia',     emoji:'🇲🇾', color:0xffd60a, flag:{type:'hstripe', colors:['#cc0001','#fff','#cc0001','#fff','#cc0001','#fff','#010066','#fff','#cc0001','#fff','#cc0001','#fff','#cc0001','#fff']} },
-  { name:'Jepang',       emoji:'🇯🇵', color:0xff3b30, flag:{type:'circle', bg:'#ffffff', circle:'#bc002d'} },
-  { name:'Korea',        emoji:'🇰🇷', color:0x0a84ff, flag:{type:'circle', bg:'#ffffff', circle:'#cd2e3a', circle2:'#0047a0'} },
-  { name:'China',        emoji:'🇨🇳', color:0xff3b30, flag:{type:'star', bg:'#de2910', star:'#ffde00'} },
-  { name:'Amerika',      emoji:'🇺🇸', color:0x0a3b8c, flag:{type:'usa'} },
-  { name:'Inggris',      emoji:'🇬🇧', color:0x0a3b8c, flag:{type:'uk'} },
-  { name:'Prancis',      emoji:'🇫🇷', color:0x0a84ff, flag:{type:'vstripe', colors:['#0055a4','#ffffff','#ef4135']} },
-  { name:'Jerman',       emoji:'🇩🇪', color:0xffd60a, flag:{type:'hstripe', colors:['#000000','#dd0000','#ffce00']} },
-  { name:'Italia',       emoji:'🇮🇹', color:0x34c759, flag:{type:'vstripe', colors:['#009246','#ffffff','#ce2b37']} },
-  { name:'Brasil',       emoji:'🇧🇷', color:0x34c759, flag:{type:'brazil'} },
-  { name:'Spanyol',      emoji:'🇪🇸', color:0xffd60a, flag:{type:'hstripe', colors:['#aa151b','#f1bf00','#f1bf00','#aa151b']} },
-  { name:'Belanda',      emoji:'🇳🇱', color:0xff9f0a, flag:{type:'hstripe', colors:['#ae1c28','#ffffff','#21468b']} },
-  { name:'Rusia',        emoji:'🇷🇺', color:0x0a84ff, flag:{type:'hstripe', colors:['#ffffff','#0039a6','#d52b1e']} },
-  { name:'Argentina',    emoji:'🇦🇷', color:0x30d5c8, flag:{type:'hstripe', colors:['#74acdf','#ffffff','#74acdf']} },
-  { name:'Saudi',        emoji:'🇸🇦', color:0x34c759, flag:{type:'solid', colors:['#006c35']} },
+  { name:'Indonesia',    code:'id', emoji:'🇮🇩', color:0xff3b30, flag:{type:'hstripe', colors:['#e1142d','#ffffff']} },
+  { name:'Malaysia',     code:'my', emoji:'🇲🇾', color:0xffd60a, flag:{type:'hstripe', colors:['#cc0001','#fff','#cc0001','#fff','#cc0001','#fff','#010066','#fff','#cc0001','#fff','#cc0001','#fff','#cc0001','#fff']} },
+  { name:'Thailand',     code:'th', emoji:'🇹🇭', color:0x2d2a4a, flag:{type:'hstripe', colors:['#a51931','#f4f5f8','#2d2a4a','#2d2a4a','#f4f5f8','#a51931']} },
+  { name:'Jepang',       code:'jp', emoji:'🇯🇵', color:0xff3b30, flag:{type:'circle', bg:'#ffffff', circle:'#bc002d'} },
+  { name:'Korea',        code:'kr', emoji:'🇰🇷', color:0x0a84ff, flag:{type:'circle', bg:'#ffffff', circle:'#cd2e3a', circle2:'#0047a0'} },
+  { name:'China',        code:'cn', emoji:'🇨🇳', color:0xff3b30, flag:{type:'star', bg:'#de2910', star:'#ffde00'} },
+  { name:'Amerika',      code:'us', emoji:'🇺🇸', color:0x0a3b8c, flag:{type:'usa'} },
+  { name:'Inggris',      code:'gb', emoji:'🇬🇧', color:0x0a3b8c, flag:{type:'uk'} },
+  { name:'Prancis',      code:'fr', emoji:'🇫🇷', color:0x0a84ff, flag:{type:'vstripe', colors:['#0055a4','#ffffff','#ef4135']} },
+  { name:'Jerman',       code:'de', emoji:'🇩🇪', color:0xffd60a, flag:{type:'hstripe', colors:['#000000','#dd0000','#ffce00']} },
+  { name:'Italia',       code:'it', emoji:'🇮🇹', color:0x34c759, flag:{type:'vstripe', colors:['#009246','#ffffff','#ce2b37']} },
+  { name:'Brasil',       code:'br', emoji:'🇧🇷', color:0x34c759, flag:{type:'brazil'} },
+  { name:'Spanyol',      code:'es', emoji:'🇪🇸', color:0xffd60a, flag:{type:'hstripe', colors:['#aa151b','#f1bf00','#f1bf00','#aa151b']} },
+  { name:'Belanda',      code:'nl', emoji:'🇳🇱', color:0xff9f0a, flag:{type:'hstripe', colors:['#ae1c28','#ffffff','#21468b']} },
+  { name:'Rusia',        code:'ru', emoji:'🇷🇺', color:0x0a84ff, flag:{type:'hstripe', colors:['#ffffff','#0039a6','#d52b1e']} },
+  { name:'Argentina',    code:'ar', emoji:'🇦🇷', color:0x30d5c8, flag:{type:'hstripe', colors:['#74acdf','#ffffff','#74acdf']} },
+  { name:'Saudi',        code:'sa', emoji:'🇸🇦', color:0x34c759, flag:{type:'solid', colors:['#006c35']} },
 ];
+
+// Real flag image URL from the internet (flagcdn — CORS friendly), with canvas fallback baked in.
+const FLAG_CDN = code => `https://flagcdn.com/w320/${code}.png`;
 
 // draw a flag onto a canvas 2d context (w x h)
 function paintFlag(ctx, w, h, spec){
@@ -321,11 +376,20 @@ function paintFlag(ctx, w, h, spec){
 }
 function drawStar(ctx,cx,cy,r){ ctx.beginPath(); for(let i=0;i<5;i++){ const a=-Math.PI/2+i*2*Math.PI/5; ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r); const a2=a+Math.PI/5; ctx.lineTo(cx+Math.cos(a2)*r*0.4, cy+Math.sin(a2)*r*0.4); } ctx.closePath(); ctx.fill(); }
 
-// make a THREE texture from a flag spec
-function flagTexture(spec){
+// make a THREE texture from a flag spec.
+// If a country `code` is given, fetch the real flag image from the internet (flagcdn);
+// if that fails (offline), fall back to the hand-drawn canvas flag so the game never breaks.
+function flagTexture(spec, code){
   const c=document.createElement('canvas'); c.width=192; c.height=128;
-  paintFlag(c.getContext('2d'), 192, 128, spec);
-  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
+  paintFlag(c.getContext('2d'), 192, 128, spec || {type:'solid', colors:['#888']});
+  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace;
+  if(code){
+    const img=new Image(); img.crossOrigin='anonymous';
+    img.onload=()=>{ t.image=img; t.needsUpdate=true; };
+    img.onerror=()=>{}; // keep canvas fallback
+    img.src=FLAG_CDN(code);
+  }
+  return t;
 }
 
 // ---- Game state ----
@@ -333,11 +397,11 @@ const G = {
   coins: 0, wave: 1, kills: 0,
   shield: 100, shieldMax: 100,
   enemyBase: 100, enemyBaseMax: 100,
-  bombs: 1, nukes: 0,
+  bombs: 1, nukes: 0, tornadoes: 0,
   gunLevel: 1, fireRateLevel: 1, shieldLevel: 1, multiLevel: 1,
   running: false,
   flag: COUNTRIES[0].color, country: COUNTRIES[0].name,
-  flagSpec: COUNTRIES[0].flag,
+  flagSpec: COUNTRIES[0].flag, flagCode: COUNTRIES[0].code,
 };
 
 // damage / stats derived from upgrades
@@ -354,6 +418,10 @@ const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -388,36 +456,135 @@ sun.shadow.camera.left=-80; sun.shadow.camera.right=80; sun.shadow.camera.top=80
 scene.add(sun);
 scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x4a7a3a, 0.8));
 
-// ground — checkered grass for a fun look
+// ground — lush grass texture with speckles & soft tiles (looks far less "flat")
 function makeGrass(){
-  const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d');
-  x.fillStyle='#5aa83f'; x.fillRect(0,0,64,64);
-  x.fillStyle='#52a038'; x.fillRect(0,0,32,32); x.fillRect(32,32,32,32);
-  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(60,60); t.colorSpace=THREE.SRGBColorSpace; return t;
+  const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,128,128); g.addColorStop(0,'#5fae42'); g.addColorStop(1,'#4f9a37');
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  // subtle checker
+  x.fillStyle='rgba(255,255,255,.05)'; x.fillRect(0,0,64,64); x.fillRect(64,64,64,64);
+  // grass speckle + tiny flowers
+  for(let i=0;i<420;i++){
+    const px=Math.random()*128, py=Math.random()*128, r=Math.random()*1.6+0.3;
+    const t=Math.random();
+    x.fillStyle = t<0.78 ? (Math.random()<.5?'#69bd49':'#458a30')
+               : t<0.9 ? '#f4e04d' : '#ffffff';
+    x.beginPath(); x.arc(px,py,r,0,7); x.fill();
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(70,70);
+  t.anisotropy=8; t.colorSpace=THREE.SRGBColorSpace; return t;
 }
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(400, 400),
-  new THREE.MeshStandardMaterial({ map:makeGrass() })
+  new THREE.MeshStandardMaterial({ map:makeGrass(), roughness:1 })
 );
 ground.rotation.x = -Math.PI/2;
 ground.receiveShadow = true;
 scene.add(ground);
 
+// battle road running down the middle of the map (base -> enemy)
+function makeRoad(){
+  const c=document.createElement('canvas'); c.width=64; c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#6b6258'; x.fillRect(0,0,64,128);
+  for(let i=0;i<200;i++){ x.fillStyle=Math.random()<.5?'#5d554c':'#787065'; x.fillRect(Math.random()*64,Math.random()*128,2,2); }
+  x.fillStyle='#e8d24a'; for(let y=6;y<128;y+=22) x.fillRect(29,y,6,12); // dashes
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(1,18); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+const road = new THREE.Mesh(new THREE.PlaneGeometry(14,250), new THREE.MeshStandardMaterial({map:makeRoad(), roughness:1}));
+road.rotation.x=-Math.PI/2; road.position.set(0,0.03,-30); road.receiveShadow=true; scene.add(road);
+
 // enemy zone (scorched land) far away
-const enemyZone = new THREE.Mesh(new THREE.PlaneGeometry(400,120), new THREE.MeshStandardMaterial({ color:0x7a6438 }));
+function makeScorched(){
+  const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#6e5a34'; x.fillRect(0,0,128,128);
+  for(let i=0;i<260;i++){ x.fillStyle=Math.random()<.5?'#5c4a28':'#82693c'; const r=Math.random()*4+1; x.beginPath(); x.arc(Math.random()*128,Math.random()*128,r,0,7); x.fill(); }
+  // charred craters
+  for(let i=0;i<6;i++){ x.fillStyle='rgba(20,10,5,.5)'; x.beginPath(); x.arc(Math.random()*128,Math.random()*128,6+Math.random()*6,0,7); x.fill(); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(24,8); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+const enemyZone = new THREE.Mesh(new THREE.PlaneGeometry(400,120), new THREE.MeshStandardMaterial({ map:makeScorched(), roughness:1 }));
 enemyZone.rotation.x = -Math.PI/2; enemyZone.position.set(0,0.02,-110); scene.add(enemyZone);
 
-// fun decorative trees scattered on our side
-function addTree(x,z){
+// fun decorative trees scattered on our side (layered foliage = less "stiff")
+function addTree(x,z,scale=1){
   const g=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,2.5,6), new THREE.MeshStandardMaterial({color:0x7a4a1e}));
-  trunk.position.y=1.25; g.add(trunk);
-  const leaf=new THREE.Mesh(new THREE.ConeGeometry(2.2,4,8), new THREE.MeshStandardMaterial({color:0x2f8f3a, flatShading:true}));
-  leaf.position.y=4; g.add(leaf);
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.55,2.6,7), new THREE.MeshStandardMaterial({color:0x7a4a1e, roughness:1}));
+  trunk.position.y=1.3; g.add(trunk);
+  const tones=[0x2f8f3a,0x3aa047,0x278034];
+  for(let i=0;i<3;i++){
+    const leaf=new THREE.Mesh(new THREE.ConeGeometry(2.3-i*0.55,2.6,8), new THREE.MeshStandardMaterial({color:tones[i], flatShading:true, roughness:1}));
+    leaf.position.y=3+i*1.4; leaf.rotation.y=i*0.5; g.add(leaf);
+  }
   g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+  g.position.set(x,0,z); g.scale.setScalar(scale*(0.8+Math.random()*0.5)); g.rotation.y=Math.random()*6; scene.add(g);
+}
+[[-40,28],[40,30],[-52,10],[52,12],[-30,40],[33,42],[-62,24],[60,20],[-46,46],[48,44],[-70,38],[68,34]].forEach(p=>addTree(p[0],p[1]));
+
+// rounded boulders
+function addRock(x,z,s){
+  const r=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0), new THREE.MeshStandardMaterial({color:0x8b8f96, flatShading:true, roughness:1}));
+  r.position.set(x,s*0.5,z); r.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3); r.castShadow=true; r.receiveShadow=true; scene.add(r);
+}
+[[-26,16,1.6],[28,8,2.1],[-58,-4,2.6],[55,-8,1.9],[-18,-20,1.4],[20,-26,1.7],[-44,2,1.2]].forEach(p=>addRock(p[0],p[1],p[2]));
+
+// camp tents on our side
+function addTent(x,z,c){
+  const g=new THREE.Group();
+  const t=new THREE.Mesh(new THREE.ConeGeometry(2.2,2.6,4), new THREE.MeshStandardMaterial({color:c, flatShading:true, roughness:1}));
+  t.rotation.y=Math.PI/4; t.position.y=1.3; t.castShadow=true; g.add(t);
   g.position.set(x,0,z); scene.add(g);
 }
-[[-40,28],[40,30],[-52,10],[52,12],[-30,40],[33,42]].forEach(p=>addTree(p[0],p[1]));
+addTent(-16,28,0x3d6b4f); addTent(15,32,0x4a5d8a); addTent(-10,40,0x6b5a3d);
+
+// guard watchtowers flanking the road
+function addTower(x,z){
+  const g=new THREE.Group();
+  const legMat=new THREE.MeshStandardMaterial({color:0x6e553a, roughness:1});
+  [[-1.4,-1.4],[1.4,-1.4],[-1.4,1.4],[1.4,1.4]].forEach(p=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.28,7,6), legMat); leg.position.set(p[0],3.5,p[1]); leg.castShadow=true; g.add(leg);
+  });
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(3.6,1.8,3.6), new THREE.MeshStandardMaterial({color:0x86643f, roughness:1}));
+  cab.position.y=7.8; cab.castShadow=true; g.add(cab);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.9,1.6,4), new THREE.MeshStandardMaterial({color:0x53402a, flatShading:true}));
+  roof.rotation.y=Math.PI/4; roof.position.y=9.5; g.add(roof);
+  g.position.set(x,0,z); scene.add(g);
+}
+addTower(-13,8); addTower(13,8);
+
+// barricades / sandbag lines near the front
+function addBarricade(x,z){
+  const g=new THREE.Group();
+  for(let i=0;i<5;i++){
+    const bag=new THREE.Mesh(new THREE.CapsuleGeometry(0.45,0.8,4,6), new THREE.MeshStandardMaterial({color:i%2?0x9c8a5a:0x847348, roughness:1}));
+    bag.rotation.z=Math.PI/2; bag.position.set((i-2)*1.0,0.6,0); bag.castShadow=true; g.add(bag);
+    const bag2=bag.clone(); bag2.position.y=1.4; bag2.position.x+=0.4; g.add(bag2);
+  }
+  g.position.set(x,0,z); scene.add(g);
+}
+addBarricade(-8,-2); addBarricade(8,-2); addBarricade(0,-6);
+
+// oil barrels
+function addBarrel(x,z,c){
+  const b=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.7,1.7,12), new THREE.MeshStandardMaterial({color:c, metalness:.3, roughness:.5}));
+  b.position.set(x,0.85,z); b.castShadow=true; scene.add(b);
+}
+addBarrel(-20,4,0xc0392b); addBarrel(-18.5,5.5,0x2c7a3f); addBarrel(22,2,0xc9a227); addBarrel(23.5,3.2,0xc0392b);
+
+// distant enemy city skyline behind the enemy base (parallax silhouette)
+function buildSkyline(){
+  const g=new THREE.Group();
+  for(let i=0;i<26;i++){
+    const h=8+Math.random()*34, w=4+Math.random()*6;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,w), new THREE.MeshStandardMaterial({color:0x33404f, roughness:1}));
+    b.position.set(-130+i*10+(Math.random()*4),h/2-1,-175-Math.random()*20); g.add(b);
+  }
+  scene.add(g);
+}
+buildSkyline();
+
+// small reflective pond on our side
+const pond = new THREE.Mesh(new THREE.CircleGeometry(9,28), new THREE.MeshStandardMaterial({color:0x2f7fb5, metalness:.6, roughness:.15, transparent:true, opacity:.85}));
+pond.rotation.x=-Math.PI/2; pond.position.set(-40,0.05,18); scene.add(pond);
 
 function addMountain(x,z,s,c){
   const m = new THREE.Mesh(new THREE.ConeGeometry(s, s*1.3, 6), new THREE.MeshStandardMaterial({color:c, flatShading:true}));
@@ -441,19 +608,38 @@ let baseGroup, flagMesh;
 function buildBase(){
   if(baseGroup) scene.remove(baseGroup);
   baseGroup = new THREE.Group();
+  // concrete platform
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(7.5,8,0.8,12), new THREE.MeshStandardMaterial({color:0x7d8794, roughness:1}));
+  slab.position.y=0.4; slab.receiveShadow=true; baseGroup.add(slab);
   // bunker
-  const bunker = new THREE.Mesh(new THREE.CylinderGeometry(4.5,5.5,3.2,8), new THREE.MeshStandardMaterial({color:0x9fb0c0, flatShading:true}));
-  bunker.position.y=1.6; bunker.castShadow=true; baseGroup.add(bunker);
+  const bunker = new THREE.Mesh(new THREE.CylinderGeometry(4.5,5.5,3.2,8), new THREE.MeshStandardMaterial({color:0x9fb0c0, roughness:.85, flatShading:true}));
+  bunker.position.y=2.0; bunker.castShadow=true; baseGroup.add(bunker);
+  // armored band
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(4.6,4.6,0.6,8), new THREE.MeshStandardMaterial({color:0x55606e, metalness:.4, roughness:.5}));
+  band.position.y=3.0; baseGroup.add(band);
   // cannon
-  const turret = new THREE.Mesh(new THREE.SphereGeometry(1.8,12,10), new THREE.MeshStandardMaterial({color:0x556070}));
-  turret.position.y=3.6; baseGroup.add(turret);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,5,10), new THREE.MeshStandardMaterial({color:0x333a44}));
-  barrel.rotation.x=Math.PI/2; barrel.position.set(0,3.6,-2.6); baseGroup.add(barrel);
-  // flag pole + flag colored by player
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,7,6), new THREE.MeshStandardMaterial({color:0x553311}));
-  pole.position.set(4.2,4.5,1); baseGroup.add(pole);
-  flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.2,2.0), new THREE.MeshStandardMaterial({map:flagTexture(G.flagSpec), side:THREE.DoubleSide}));
-  flagMesh.position.set(5.8,7,1); baseGroup.add(flagMesh);
+  const turret = new THREE.Mesh(new THREE.SphereGeometry(1.8,16,12), new THREE.MeshStandardMaterial({color:0x556070, metalness:.5, roughness:.4}));
+  turret.position.y=4.0; turret.castShadow=true; baseGroup.add(turret);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,5,12), new THREE.MeshStandardMaterial({color:0x2b313b, metalness:.6, roughness:.35}));
+  barrel.rotation.x=Math.PI/2; barrel.position.set(0,4.0,-2.6); baseGroup.add(barrel);
+  const muzzleRing = new THREE.Mesh(new THREE.TorusGeometry(0.5,0.12,8,16), new THREE.MeshStandardMaterial({color:0x11151c}));
+  muzzleRing.position.set(0,4.0,-5); baseGroup.add(muzzleRing);
+  // sandbag ring around the base
+  for(let i=0;i<14;i++){
+    const a=i/14*Math.PI*2;
+    const bag=new THREE.Mesh(new THREE.CapsuleGeometry(0.5,0.9,4,6), new THREE.MeshStandardMaterial({color:i%2?0x9c8a5a:0x8a7a4c, roughness:1}));
+    bag.rotation.z=Math.PI/2; bag.rotation.y=a; bag.position.set(Math.cos(a)*6.4,1.0,Math.sin(a)*6.4); bag.castShadow=true; baseGroup.add(bag);
+  }
+  // radar antenna
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,3,6), new THREE.MeshStandardMaterial({color:0x333}));
+  mast.position.set(-3.5,4,-1); baseGroup.add(mast);
+  const dish=new THREE.Mesh(new THREE.SphereGeometry(0.9,12,8,0,Math.PI*2,0,Math.PI/2), new THREE.MeshStandardMaterial({color:0xcdd5dd, metalness:.3, side:THREE.DoubleSide}));
+  dish.position.set(-3.5,5.4,-1); dish.rotation.x=-0.6; baseGroup.add(dish);
+  // flag pole + real-world flag of the chosen country
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,8,6), new THREE.MeshStandardMaterial({color:0xb9c1c9, metalness:.6, roughness:.3}));
+  pole.position.set(4.6,5.0,1); baseGroup.add(pole);
+  flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4,2.2,12,1), new THREE.MeshStandardMaterial({map:flagTexture(G.flagSpec, G.flagCode), side:THREE.DoubleSide, roughness:.9}));
+  flagMesh.position.set(6.4,7.6,1); baseGroup.add(flagMesh);
   baseGroup.position.set(0,0,18);
   scene.add(baseGroup);
 }
@@ -481,6 +667,7 @@ const bullets = [];   // player projectiles {mesh, vel, dmg, life}
 const eBullets = [];  // enemy projectiles {mesh, vel, life}
 const allies = [];    // friendly soldiers {mesh, hp, fireT, life, gun}
 const allyBullets = [];// friendly soldier bullets {mesh, vel, dmg, life}
+const tornadoes = []; // active tornadoes {group, pos, life, swirl[]}
 const fx = [];        // particles {mesh, vel, life, fade}
 
 // weather + ability cooldowns (seconds)
@@ -493,24 +680,42 @@ const tmpV2 = new THREE.Vector3();
 
 function makeTank(){
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.4,1.4,4.6), new THREE.MeshStandardMaterial({color:0x556b2f, flatShading:true}));
-  body.position.y=1; body.castShadow=true; g.add(body);
-  const tur = new THREE.Mesh(new THREE.BoxGeometry(2,1,2.4), new THREE.MeshStandardMaterial({color:0x6b8e23}));
-  tur.position.y=2.1; g.add(tur);
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,3,8), new THREE.MeshStandardMaterial({color:0x222}));
-  bar.rotation.x=Math.PI/2; bar.position.set(0,2.1,2); g.add(bar);
+  const camo = new THREE.MeshStandardMaterial({color:0x4f6b2f, flatShading:true, roughness:.85});
+  const dark = new THREE.MeshStandardMaterial({color:0x2a2f22, roughness:.8, metalness:.3});
+  // hull
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.4,1.2,4.6), camo);
+  body.position.y=1.1; body.castShadow=true; g.add(body);
+  const glacis = new THREE.Mesh(new THREE.BoxGeometry(3.2,0.7,1.4), camo);
+  glacis.position.set(0,0.9,2.4); glacis.rotation.x=-0.5; g.add(glacis);
+  // treads
+  [-1.9,1.9].forEach(sx=>{
+    const tr=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.0,5.0), dark); tr.position.set(sx,0.6,0); tr.castShadow=true; g.add(tr);
+    for(let i=0;i<4;i++){ const w=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.55,0.5,10), new THREE.MeshStandardMaterial({color:0x111})); w.rotation.z=Math.PI/2; w.position.set(sx,0.55,-1.8+i*1.2); g.add(w);}
+  });
+  // turret + barrel
+  const tur = new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,1.0,10), new THREE.MeshStandardMaterial({color:0x5d7a2a, flatShading:true, roughness:.8}));
+  tur.position.y=2.2; tur.castShadow=true; g.add(tur);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.24,3.4,10), dark);
+  bar.rotation.x=Math.PI/2; bar.position.set(0,2.25,2.2); g.add(bar);
+  const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,0.3,8), dark); hatch.position.set(0,2.75,-0.2); g.add(hatch);
   return g;
 }
 function makeJet(){
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.9,5,8), new THREE.MeshStandardMaterial({color:0xb0b8c0, flatShading:true}));
-  body.rotation.x=-Math.PI/2; g.add(body);
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(6,0.25,1.6), new THREE.MeshStandardMaterial({color:0x8a929c}));
-  g.add(wing);
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(2.4,0.2,0.9), new THREE.MeshStandardMaterial({color:0x8a929c}));
-  tail.position.set(0,0.1,-2); g.add(tail);
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.2,1.4,1), new THREE.MeshStandardMaterial({color:0x8a929c}));
-  fin.position.set(0,0.8,-2); g.add(fin);
+  const metal = new THREE.MeshStandardMaterial({color:0xc2cad2, metalness:.6, roughness:.35, flatShading:true});
+  const wingMat = new THREE.MeshStandardMaterial({color:0x8a929c, metalness:.4, roughness:.5});
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.85,5.2,12), metal);
+  body.rotation.x=-Math.PI/2; body.castShadow=true; g.add(body);
+  // swept wings
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(6.4,0.2,1.5), wingMat); wing.position.z=-0.2; g.add(wing);
+  const canard = new THREE.Mesh(new THREE.BoxGeometry(3,0.18,0.9), wingMat); canard.position.set(0,0,1.6); g.add(canard);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(2.6,0.2,0.9), wingMat); tail.position.set(0,0.1,-2.1); g.add(tail);
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.2,1.5,1.1), wingMat); fin.position.set(0,0.85,-2.1); g.add(fin);
+  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.55,10,8), new THREE.MeshStandardMaterial({color:0x16324d, metalness:.5, roughness:.2})); cockpit.position.set(0,0.35,1.2); cockpit.scale.z=1.6; g.add(cockpit);
+  // afterburner glow
+  const burn = new THREE.Mesh(new THREE.ConeGeometry(0.5,1.8,8), new THREE.MeshBasicMaterial({color:0x59c8ff, transparent:true, opacity:.8}));
+  burn.rotation.x=Math.PI/2; burn.position.z=-3.1; g.add(burn);
+  g.userData.burn = burn;
   return g;
 }
 function makeMissile(){
@@ -570,6 +775,15 @@ function spawnEnemy(type){
 //  Aiming + shooting
 // =========================================================
 const aim = { x: innerWidth/2, y: innerHeight*0.42 };
+
+// ---- Camera pan: explore the map left/right/up/down ----
+const camPan = { x:0, y:0, tx:0, ty:0 };   // current & target offset
+const PAN = { maxX:58, maxY:22, minY:-5, spd:42 };
+let recoilZ = 0;
+const padDir = { l:0, r:0, u:0, d:0 };       // on-screen D-pad state
+const keyState = {};                          // keyboard arrows / WASD
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
 const crossEl = document.getElementById('cross');
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
@@ -615,7 +829,7 @@ function fire(){
   recoil();
 }
 
-function recoil(){ camera.position.z = 24.6; }
+function recoil(){ recoilZ = 0.7; }
 
 function muzzleFlash(pos){
   const f = new THREE.Mesh(new THREE.SphereGeometry(1.1,8,8), new THREE.MeshBasicMaterial({color:0xfff1a8}));
@@ -667,6 +881,54 @@ function useNuke(){
   // wipe most enemies + big hit to enemy base
   for(let i=enemies.length-1;i>=0;i--) damageEnemy(i, 9999);
   damageEnemyBase(35);
+}
+
+// =========================================================
+//  Tornado (must be BOUGHT in the shop first)
+// =========================================================
+function makeTornadoMesh(){
+  const g = new THREE.Group();
+  const swirl=[];
+  // stacked funnel rings — wide at top, narrow at bottom
+  const N=9;
+  for(let i=0;i<N;i++){
+    const f=i/(N-1);
+    const r = 1.0 + f*5.5;
+    const ring = new THREE.Mesh(
+      new THREE.CylinderGeometry(r, Math.max(0.6,r-1.2), 2.4, 16, 1, true),
+      new THREE.MeshStandardMaterial({color: i%2?0x8a8f98:0x6f757e, transparent:true, opacity:0.55, side:THREE.DoubleSide, roughness:1, depthWrite:false})
+    );
+    ring.position.y = 1.2 + i*2.3;
+    ring.userData.spin = (0.6 + f*1.4) * (i%2?1:-1);
+    g.add(ring); swirl.push(ring);
+  }
+  // debris particles orbiting
+  for(let i=0;i<26;i++){
+    const p=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5), new THREE.MeshStandardMaterial({color:0x5a5048}));
+    const ang=Math.random()*7, h=Math.random()*18, rad=1+ (h/18)*5;
+    p.position.set(Math.cos(ang)*rad, h+1, Math.sin(ang)*rad);
+    p.userData={ang, rad, h, sp:1+Math.random()*2};
+    g.add(p); swirl.push(p);
+  }
+  return { group:g, swirl };
+}
+
+function spawnTornado(pos){
+  const t = makeTornadoMesh();
+  t.group.position.copy(pos); t.group.position.y=0;
+  scene.add(t.group);
+  tornadoes.push({ group:t.group, swirl:t.swirl, pos:pos.clone(), life:6.0 });
+}
+
+function useTornado(){
+  if(G.tornadoes<=0 || !G.running) return;
+  G.tornadoes--; updateHUD();
+  updateAimPoint();
+  const pos = aimPoint.clone(); pos.y=0;
+  pos.x = Math.max(-44, Math.min(44, pos.x));
+  spawnTornado(pos);
+  Sound.tornado();
+  toast('🌪️ TORNADO MENGAMUK!');
 }
 
 // =========================================================
@@ -790,8 +1052,10 @@ function updateHUD(){
   el('enemyFill').style.width = (G.enemyBase/G.enemyBaseMax*100)+'%';
   el('bombCount').textContent = 'x'+G.bombs;
   el('nukeCount').textContent = 'x'+G.nukes;
+  el('tornadoCount').textContent = 'x'+G.tornadoes;
   el('bombBtn').disabled = G.bombs<=0;
   el('nukeBtn').disabled = G.nukes<=0;
+  el('tornadoBtn').disabled = G.tornadoes<=0;
 }
 
 let toastT;
@@ -832,17 +1096,25 @@ function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
-  // recoil recover (z)
-  camera.position.z += (24 - camera.position.z)*Math.min(1,dt*10);
-  // earthquake camera shake (x,y)
+  // ---- camera pan (explore map) + recoil + earthquake shake ----
+  const ps = PAN.spd*dt;
+  if(keyState.ArrowLeft||keyState.KeyA||padDir.l) camPan.tx -= ps;
+  if(keyState.ArrowRight||keyState.KeyD||padDir.r) camPan.tx += ps;
+  if(keyState.ArrowUp||keyState.KeyW||padDir.u) camPan.ty += ps;
+  if(keyState.ArrowDown||keyState.KeyS||padDir.d) camPan.ty -= ps;
+  camPan.tx = clamp(camPan.tx, -PAN.maxX, PAN.maxX);
+  camPan.ty = clamp(camPan.ty, PAN.minY, PAN.maxY);
+  camPan.x += (camPan.tx - camPan.x)*Math.min(1,dt*6);
+  camPan.y += (camPan.ty - camPan.y)*Math.min(1,dt*6);
+  recoilZ += (0 - recoilZ)*Math.min(1,dt*10);
+  let cx = camPan.x, cy = 7 + camPan.y, cz = 24 + recoilZ;
   if(weather.shake>0){
     const s = Math.min(1, weather.shake/3) * 0.9;
-    camera.position.x = (Math.random()*2-1)*s*1.4;
-    camera.position.y = 7 + (Math.random()*2-1)*s*1.0;
-  } else {
-    camera.position.x += (0-camera.position.x)*Math.min(1,dt*8);
-    camera.position.y += (7-camera.position.y)*Math.min(1,dt*8);
+    cx += (Math.random()*2-1)*s*1.4;
+    cy += (Math.random()*2-1)*s*1.0;
   }
+  camera.position.set(cx, cy, cz);
+  camera.lookAt(camPan.x*0.5, 4 + camPan.y*0.85, -45);
 
   // clouds drift
   for(const c of clouds){ c.position.x += c.userData.spd*dt; if(c.position.x>130) c.position.x=-130; }
@@ -978,6 +1250,39 @@ function animate(){
       if(b.mesh.position.distanceTo(baseP)<6){ damageShield(6); explosion(b.mesh.position.clone(),0.8,0xff5050); scene.remove(b.mesh); eBullets.splice(i,1); continue; }
       if(b.life<=0){ scene.remove(b.mesh); eBullets.splice(i,1); }
     }
+
+    // === tornadoes: spin, drift, suck up & shred enemies in range ===
+    const TR=15;
+    for(let i=tornadoes.length-1;i>=0;i--){
+      const tor=tornadoes[i]; tor.life-=dt;
+      // animate funnel rings + debris
+      for(const s of tor.swirl){
+        if(s.userData.spin!==undefined){ s.rotation.y += s.userData.spin*dt*4; }
+        else { s.userData.ang += s.userData.sp*dt*3; s.position.set(Math.cos(s.userData.ang)*s.userData.rad, s.userData.h+1, Math.sin(s.userData.ang)*s.userData.rad); s.rotation.x+=dt*5; }
+      }
+      // drift slowly toward the enemy side, wandering a little
+      tor.pos.z -= 7*dt;
+      tor.pos.x += Math.sin(tor.life*2)*8*dt;
+      tor.pos.x = Math.max(-46, Math.min(46, tor.pos.x));
+      tor.group.position.set(tor.pos.x, 0, tor.pos.z);
+      // pull in & damage nearby enemies
+      for(let j=enemies.length-1;j>=0;j--){
+        const e=enemies[j]; const m=e.mesh;
+        const dx=tor.pos.x-m.position.x, dz=tor.pos.z-m.position.z;
+        const d=Math.hypot(dx,dz);
+        if(d<TR){
+          const pull=(1-d/TR);
+          // swirl around the eye + get lifted off the ground
+          const ang=Math.atan2(dz,dx)+1.3;
+          m.position.x += (Math.cos(ang)*4 + dx*0.5)*pull*dt*3;
+          m.position.z += (Math.sin(ang)*4 + dz*0.5)*pull*dt*3;
+          m.position.y += 9*pull*dt;
+          m.rotation.y += dt*8*pull; m.rotation.x += dt*5*pull; m.rotation.z += dt*4*pull;
+          damageEnemy(j, 55*dt); // continuous shredding
+        }
+      }
+      if(tor.life<=0){ scene.remove(tor.group); tornadoes.splice(i,1); }
+    }
   }
 
   // fx particles
@@ -1044,6 +1349,7 @@ const SHOP = [
   { id:'shield', ic:'🛡️', name:'Perisai Lebih Tebal', desc:'+60 perisai maks', base:60, get lvl(){return G.shieldLevel;}, max:6, apply(){G.shieldLevel++; G.shield=stats.shieldMax;} },
   { id:'repair', ic:'❤️', name:'Perbaiki Perisai', desc:'Isi penuh perisai', base:30, lvl:0, max:99, apply(){G.shield=stats.shieldMax;} },
   { id:'bomb', ic:'💣', name:'Beli Bom', desc:'Ledakan area besar', base:35, lvl:0, max:99, apply(){G.bombs++;} },
+  { id:'tornado', ic:'🌪️', name:'Beli Tornado', desc:'Badai pengisap yang menyeret & mencabik musuh', base:90, lvl:0, max:99, apply(){G.tornadoes++;} },
   { id:'nuke', ic:'☢️', name:'Beli Bom Nuklir', desc:'Hapus hampir semua musuh', base:150, lvl:0, max:99, apply(){G.nukes++;} },
 ];
 function priceOf(it){ return it.base + (it.lvl>0 ? it.lvl*it.lvl*15 : 0); }
@@ -1076,13 +1382,20 @@ function renderShop(){
 const countryPick = el('countryPick');
 COUNTRIES.forEach((co,i)=>{
   const tile=document.createElement('div'); tile.className='countryTile'+(i===0?' sel':'');
-  const cv=document.createElement('canvas'); cv.width=92; cv.height=62;
-  paintFlag(cv.getContext('2d'), 92, 62, co.flag);
+  // real flag image from the internet; fall back to a hand-drawn canvas flag if offline
+  const img=document.createElement('img');
+  img.src=FLAG_CDN(co.code); img.alt=co.name; img.loading='lazy';
+  img.onerror=()=>{
+    const cv=document.createElement('canvas'); cv.width=92; cv.height=62;
+    paintFlag(cv.getContext('2d'), 92, 62, co.flag);
+    img.replaceWith(cv); cv.style.cssText='width:46px;height:31px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.5)';
+  };
   const nm=document.createElement('span'); nm.textContent=co.name;
-  tile.appendChild(cv); tile.appendChild(nm);
+  tile.appendChild(img); tile.appendChild(nm);
   tile.onclick=()=>{
-    G.country=co.name; G.flag=co.color; G.flagSpec=co.flag;
+    G.country=co.name; G.flag=co.color; G.flagSpec=co.flag; G.flagCode=co.code;
     el('nameInput').value=co.name;
+    el('flagDot').style.backgroundImage=`url(${FLAG_CDN(co.code)})`;
     document.querySelectorAll('.countryTile').forEach(x=>x.classList.remove('sel'));
     document.querySelectorAll('.flagopt').forEach(x=>x.classList.remove('sel'));
     tile.classList.add('sel');
@@ -1099,8 +1412,9 @@ FLAG_COLORS.forEach((c,i)=>{
   const d=document.createElement('div'); d.className='flagopt';
   d.style.background='#'+c.toString(16).padStart(6,'0');
   d.onclick=()=>{
-    G.flag=c; G.flagSpec={type:'solid', colors:['#'+c.toString(16).padStart(6,'0')]};
+    G.flag=c; G.flagSpec={type:'solid', colors:['#'+c.toString(16).padStart(6,'0')]}; G.flagCode=null;
     G.country = (el('nameInput').value||'Negaraku').trim() || 'Negaraku';
+    el('flagDot').style.backgroundImage='none'; el('flagDot').style.background='#'+c.toString(16).padStart(6,'0');
     document.querySelectorAll('.flagopt').forEach(x=>x.classList.remove('sel'));
     document.querySelectorAll('.countryTile').forEach(x=>x.classList.remove('sel'));
     d.classList.add('sel');
@@ -1116,10 +1430,22 @@ el('fireBtn').addEventListener('pointerdown', e=>{ e.preventDefault(); holdFire=
 el('fireBtn').addEventListener('pointerup', ()=>holdFire=false);
 el('bombBtn').onclick = useBomb;
 el('nukeBtn').onclick = useNuke;
+el('tornadoBtn').onclick = useTornado;
 el('rainBtn').onclick = startRain;
 el('quakeBtn').onclick = startQuake;
 el('allyBtn').onclick = deployAllies;
 el('muteBtn').onclick = ()=>{ const m=Sound.toggle(); el('muteBtn').textContent = m?'🔇':'🔊'; };
+
+// D-pad: hold to pan the camera and explore the map
+document.querySelectorAll('#dpad .padBtn').forEach(btn=>{
+  const dir = btn.dataset.dir;
+  const on = e=>{ e.preventDefault(); padDir[dir]=1; };
+  const off = e=>{ if(e) e.preventDefault(); padDir[dir]=0; };
+  btn.addEventListener('pointerdown', on);
+  btn.addEventListener('pointerup', off);
+  btn.addEventListener('pointercancel', off);
+  btn.addEventListener('pointerleave', off);
+});
 
 let holdFire=false;
 let shopOpen=false;
@@ -1133,14 +1459,17 @@ function startGame(){
   Sound.ensure();
   G.country = (el('nameInput').value||'Negaraku').trim().slice(0,14) || 'Negaraku';
   el('countryName').textContent = G.country;
-  el('flagDot').style.background = '#'+G.flag.toString(16).padStart(6,'0');
+  if(G.flagCode){ el('flagDot').style.backgroundImage=`url(${FLAG_CDN(G.flagCode)})`; }
+  else { el('flagDot').style.backgroundImage='none'; el('flagDot').style.background='#'+G.flag.toString(16).padStart(6,'0'); }
   G.shield = stats.shieldMax; G.shieldMax = stats.shieldMax;
-  // reset cuaca, cooldown, pasukan
+  // reset cuaca, cooldown, pasukan, tornado, kamera
   weather.rain=0; weather.quake=0; weather.shake=0;
   cd.rain=0; cd.quake=0; cd.ally=0;
+  camPan.x=camPan.y=camPan.tx=camPan.ty=0;
   stopRain();
   allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
   allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
+  tornadoes.forEach(t=>scene.remove(t.group)); tornadoes.length=0;
   buildBase();
   el('startScreen').classList.add('hidden');
   G.running=true;
@@ -1155,6 +1484,7 @@ function endGame(win){
   eBullets.forEach(b=>scene.remove(b.mesh)); eBullets.length=0;
   allies.forEach(a=>scene.remove(a.mesh)); allies.length=0;
   allyBullets.forEach(b=>scene.remove(b.mesh)); allyBullets.length=0;
+  tornadoes.forEach(t=>scene.remove(t.group)); tornadoes.length=0;
   stopRain();
   win ? Sound.win() : Sound.lose();
   // update & save high score
@@ -1190,15 +1520,19 @@ cvs.addEventListener('pointermove', e=>{ if(dragging) pointerMove(e.clientX,e.cl
 window.addEventListener('pointerup', ()=>{ dragging=false; holdFire=false; });
 
 // keyboard for desktop
+const PAN_KEYS = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyW','KeyA','KeyS','KeyD'];
 addEventListener('keydown', e=>{
+  if(PAN_KEYS.includes(e.code)){ keyState[e.code]=true; e.preventDefault(); }
   if(!G.running) return;
   if(e.code==='Space'){ e.preventDefault(); fire(); }
   if(e.code==='KeyB') useBomb();
   if(e.code==='KeyN') useNuke();
+  if(e.code==='KeyF') useTornado();
   if(e.code==='KeyR') startRain();
   if(e.code==='KeyG') startQuake();
   if(e.code==='KeyT') deployAllies();
 });
+addEventListener('keyup', e=>{ if(PAN_KEYS.includes(e.code)) keyState[e.code]=false; });
 // mouse aim on desktop without dragging
 addEventListener('mousemove', e=>{ if(G.running && !('ontouchstart' in window)) pointerMove(e.clientX,e.clientY); });
 
